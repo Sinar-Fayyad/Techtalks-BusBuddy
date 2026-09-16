@@ -1,0 +1,45 @@
+.page {
+  min-height: 100vh;
+  background: var(--bb-bg-gradient);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.card {
+  width: 100%; max-width: 420px;
+  background: var(--bb-card-bg);
+  border-radius: 24px; padding: 32px 24px;
+  backdrop-filter: blur(12px);
+}
+.title { color: var(--bb-text); text-align: center; font-size: 28px; font-weight: 800; margin: 0 0 4px; }
+.subtitle { color: var(--bb-text-dim); text-align: center; margin: 0 0 24px; font-size: 15px; }
+/* pill field = gradient ring (2px padding) around a dark pill */
+.field {
+  background: var(--bb-border-gradient);
+  padding: 2px; border-radius: 999px; margin-bottom: 16px;
+}
+.fieldInner {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bb-input-bg);
+  border-radius: 999px; padding: 12px 16px;
+}
+.field:focus-within { outline: 2px solid var(--bb-text); outline-offset: 2px; } /* keyboard focus */
+.icon { flex-shrink: 0; }
+.input {
+  flex: 1; background: transparent; border: none; outline: none;
+  color: var(--bb-text); font-size: 15px;
+}
+.input::placeholder { color: var(--bb-text-dim); }
+.eyeBtn {
+  background: transparent; border: none; color: var(--bb-text-dim);
+  cursor: pointer; font-size: 16px; padding: 0;
+}
+.fieldError { color: var(--bb-error); font-size: 13px; margin: 6px 0 0 16px; }
+.submit {
+  width: 100%; border: none; border-radius: 999px; cursor: pointer;
+  background: var(--bb-btn-gradient);
+  color: var(--bb-text); font-size: 17px; font-weight: 700;
+  padding: 14px; margin-top: 8px;
+}
+.submit:disabled { opacity: 0.6; cursor: not-allowed; }
+.success { color: var(--bb-text); text-align: center; margin-top: 16px; font-weight: 600; }
+.error { color: var(--bb-error); text-align: center; margin-top: 16px; font-weight: 600; }
