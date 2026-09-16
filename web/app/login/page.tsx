@@ -1,0 +1,84 @@
+'use client';
+import { useState } from 'react';
+import styles from './page.module.css';
+
+export default function LoginPage() {
+  const [form, setForm] = useState({ email: '', password: '' });
+  const [fieldError, setFieldError] = useState({ email: '', password: '' });
+  const [msg, setMsg] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showPw, setShowPw] = useState(false);
+
+  const set = (k: string) => (e: any) => setForm({ ...form, [k]: e.target.value });
+
+  const submit = async (e: any) => {
+    e.preventDefault();
+    setError(''); setMsg('');
+    const fe = { email: '', password: '' };
+    if (!form.email.trim()) fe.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(form.email)) fe.email = 'Enter a valid email';
+    if (!form.password) fe.password = 'Password is required';
+
+    setFieldError(fe);
+    if (!form.email.trim()) fe.email = 'Email is required';
+    if (!form.password) fe.password = 'Password is required';
+
+
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.email, password: form.password }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error ?? 'Invalid email or password'); return; }
+      setMsg(`Login successful as ${data.role}. ✅`);
+    } catch {
+      setError('Server error — is the dev server running?');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <main className={styles.page}>
+      <div className={styles.card}>
+        <h1 className={styles.title}>Welcome Back!</h1>
+        <p className={styles.subtitle}>Log in to continue your journey.</p>
+
+        <form onSubmit={submit} noValidate>
+          <div className={styles.field}>
+            <div className={styles.fieldInner}>
+              <span className={styles.icon} aria-hidden>👤</span>
+              <input className={styles.input} type="email" placeholder="Email"
+                value={form.email} onChange={set('email')}
+                aria-label="Email" aria-invalid={!!fieldError.email} />
+            </div>
+          </div>
+          {fieldError.email && <p className={styles.fieldError}>{fieldError.email}</p>}
+
+          <div className={styles.field}>
+            <div className={styles.fieldInner}>
+              <span className={styles.icon} aria-hidden>🔒</span>
+              <input className={styles.input} type={showPw ? 'text' : 'password'}
+                placeholder="Password" value={form.password} onChange={set('password')}
+                aria-label="Password" aria-invalid={!!fieldError.password} />
+              <button type="button" className={styles.eyeBtn} aria-label={showPw ? 'Hide password' : 'Show password'}
+                onClick={() => setShowPw(!showPw)}>{showPw ? '🙈' : '👁️'}</button>
+            </div>
+          </div>
+          {fieldError.password && <p className={styles.fieldError}>{fieldError.password}</p>}
+
+          <button type="submit" className={styles.submit} disabled={loading}>
+            {loading ? 'Logging in...' : 'Log In →'}
+          </button>
+        </form>
+
+        {msg && <p className={styles.success}>{msg}</p>}
+        {error && <p className={styles.error}>{error}</p>}
+      </div>
+    </main>
+  );
+}
