@@ -1,6 +1,8 @@
 'use client';
-import { useState } from 'react';
+
+import { useState, type ChangeEvent, type FormEvent } from 'react';
 import styles from './page.module.css';
+
 
 export default function LoginPage() {
   const [form, setForm] = useState({ email: '', password: '' });
@@ -10,37 +12,58 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
 
-  const set = (k: string) => (e: any) => setForm({ ...form, [k]: e.target.value });
+  const set = (key: 'email' | 'password') => (e: ChangeEvent<HTMLInputElement>) =>
+  setForm((current) => ({ ...current, [key]: e.target.value }));
 
-  const submit = async (e: any) => {
-    e.preventDefault();
-    setError(''); setMsg('');
-    const fe = { email: '', password: '' };
-    if (!form.email.trim()) fe.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(form.email)) fe.email = 'Enter a valid email';
-    if (!form.password) fe.password = 'Password is required';
+const submit = async (e: FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+  setError('');
+  setMsg('');
 
-    setFieldError(fe);
-    if (!form.email.trim()) fe.email = 'Email is required';
-    if (!form.password) fe.password = 'Password is required';
+  const fe = { email: '', password: '' };
+  const email = form.email.trim();
 
+  if (!email) {
+    fe.email = 'Email is required';
+  } else if (!/\S+@\S+\.\S+/.test(email)) {
+    fe.email = 'Enter a valid email';
+  }
 
-    setLoading(true);
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.email, password: form.password }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error ?? 'Invalid email or password'); return; }
-      setMsg(`Login successful as ${data.role}. ✅`);
-    } catch {
-      setError('Server error — is the dev server running?');
-    } finally {
-      setLoading(false);
+  if (!form.password) {
+    fe.password = 'Password is required';
+  }
+
+  setFieldError(fe);
+
+  // Required: prevents any API request when validation fails.
+  if (fe.email || fe.password) return;
+
+  setLoading(true);
+
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email,
+        password: form.password,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setError(data.error ?? data.message ?? 'Invalid email or password');
+      return;
     }
-  };
+
+    setMsg(`Login successful as ${data.role}. ✅`);
+  } catch {
+    setError('Server error — is the dev server running?');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <main className={styles.page}>

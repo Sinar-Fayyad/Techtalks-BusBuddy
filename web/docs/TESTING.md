@@ -44,3 +44,24 @@
 ## Known Issues
 
 - Tokens pasted manually into admin UI (dev convenience, replace with login page in Sprint 2)
+
+## Sprint 2 — T1 Login Page (BUS-?)
+
+| # | Test | Steps | Expected | Result |
+|---|------|-------|----------|--------|
+| 21 | Admin login UI | /login → admin credentials → submit | "Login successful as admin." | ⬜ |
+| 22 | Driver login UI | /login → driver credentials → submit | "Login successful as driver." | ⬜ |
+| 23 | Wrong password | /login → valid email, wrong password | red error, stays on /login | ⬜ |
+| 24 | Empty fields | /login → submit with empty email/password | inline errors, no network call (check DevTools) | ⬜ |
+| 25 | Server down | stop WAMP/Node, submit | friendly error, page usable | ⬜ |
+
+<!-- Git -->
+
+git checkout dev && git pull
+git checkout -b feature/login-page
+# add the 2 new files, then:
+git commit -m "Login Page: add login form with validation and error handling"
+# after testing, add the TESTING.md block:
+git commit -m "Login Page: add login test checklist entries"
+git push -u origin feature/login-page
+# then open the PR into dev

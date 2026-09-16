@@ -5,11 +5,19 @@
   padding: 24px;
 }
 .card {
-  width: 100%; max-width: 420px;
+  /* existing card styles */
   background: var(--bb-card-bg);
-  border-radius: 24px; padding: 32px 24px;
+
+  -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
 }
+
+@supports not ((-webkit-backdrop-filter: blur(12px)) or (backdrop-filter: blur(12px))) {
+  .card {
+    background: var(--bb-card-bg-fallback);
+  }
+}
+
 .title { color: var(--bb-text); text-align: center; font-size: 28px; font-weight: 800; margin: 0 0 4px; }
 .subtitle { color: var(--bb-text-dim); text-align: center; margin: 0 0 24px; font-size: 15px; }
 /* pill field = gradient ring (2px padding) around a dark pill */
