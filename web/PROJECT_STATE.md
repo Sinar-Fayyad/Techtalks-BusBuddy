@@ -57,6 +57,16 @@ Every teammate MUST append an update block at the end of this file before openin
 
 ## Changelog
 
+## 16/09/2026 — Wassim Mahmoud — Login Page (web)
+- Added the /login page: email/password form with client-side validation, password visibility toggle, loading/success/error states, styled per T10 mockup (gradient background, glass card, pill inputs).
+- Calls POST /api/auth/login per API contract v1. Token is not stored and no session is kept (T2 scope).
+
+- New/changed: web/app/login/page.tsx, web/app/login/page.module.css (new); web/app/globals.css (added --bb-* theme variables; existing 5 variables untouched). No new endpoints, no DB changes, shared Input/Button components not modified.
+- How it was tested: admin login and driver login return success message with role (200); wrong password shows error and stays on /login (401); empty or invalid-format email shows inline errors and makes no API call (verified in DevTools Network tab); server stopped shows friendly error and page stays usable. Accounts verified in phpMyAdmin (roles correct, bcrypt hashes).
+- Gotchas others must know: page uses its own CSS module instead of shared Input/Button (they don't support pill/gradient styles) — T9 design cleanup should unify this. Safari blur needs -webkit-backdrop-filter; an @supports fallback raises card opacity where blur is unsupported. The schema SQL should be committed to the repo by the DB owner — local setup required importing it manually.
+
+
+
 <!-- Append your block below this line after finishing a task. Format:
 
 ## YYYY-MM-DD — [name] — [task name]
