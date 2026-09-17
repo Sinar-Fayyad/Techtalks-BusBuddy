@@ -83,6 +83,55 @@ Every teammate MUST append an update block at the end of this file before openin
 6. Empty submit, then email "abc" → inline errors, no network request
 7. Stop dev server → submit → friendly error; restart → works again
 
+## 2026-09-17 — Tamara — T2 — Auth session (web)
+- Added a client-side auth context (web/app/auth-context.tsx) that stores the JWT and role
+  returned by POST /api/auth/login in localStorage (keys: bb_token, bb_role) and restores
+  them on refresh. The login page now calls login() on success and redirects admins to
+  /admin/drivers. The /admin/drivers page no longer uses the manual token paste-box: it
+  reads the session, redirects to /login when no session exists, shows an "Access denied"
+  screen with no API call for non-admin roles, auto-logs-out on 401, and has a Logout button.
+- New/changed: web/app/auth-context.tsx (new); web/app/layout.tsx (children wrapped in
+  AuthProvider); web/app/login/page.tsx (stores session, admin redirect); web/app/admin/drivers/page.tsx
+  (session guards, logout). No new endpoints, no DB changes, shared components untouched.
+- How it was tested (all on 2026-09-17): 1) admin login -> auto-redirect to /admin/drivers;
+  2) browser refresh -> session restored, still logged in; 3) logout -> opening
+  /admin/drivers by URL redirects to /login; 4) driver login -> /admin/drivers shows
+  "Access denied" with no data and no API call; 5) wrong password -> 401 error, stays on
+  /login (T1 behavior unchanged). Accounts created via POST /api/auth/signup and verified
+  in the database (roles correct).
+- Gotchas others must know: localStorage keys are bb_token/bb_role (the old admin_token
+  key is abandoned). The admin page waits for a `ready` flag before redirecting — without
+  it a refresh briefly sees token=null and falsely redirects to /login. The schema SQL
+  shared in chat names the password column `password` but the signup/login routes use
+  `password_hash` — local DBs need the column named password_hash (ALTER TABLE
+  BusBuddy_app.users CHANGE password password_hash VARCHAR(255) NOT NULL); the committed
+  schema should be reconciled with the code. Local setup also requires web/.env with
+  DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, JWT_SECRET (JWT_SECRET is required by all
+  protected routes). T4 also edits web/app/admin/drivers/page.tsx — whoever merges second
+  may need to resolve small conflicts.
+
+## Changes
+- New AuthProvider (web/app/auth-context.tsx): holds token + role in React state,
+  persisted in localStorage (bb_token / bb_role), restored on refresh.
+- web/app/layout.tsx: app wrapped in AuthProvider.
+- Login page: stores token/role after successful POST /api/auth/login; admins are
+  redirected to /admin/drivers.
+- Admin drivers page: manual token paste-box removed. Session-based instead:
+  no session -> redirect to /login; driver token -> "Access denied" with zero API
+  calls; 401 (stale/invalid token) -> auto-logout -> /login; Logout button clears
+  the session.
+
+## How to test
+1. Set up web/.env (DB + JWT_SECRET) and the BusBuddy_app schema, then create an
+   admin and a driver account via POST /api/auth/signup.
+2. Log in as admin at /login -> lands on /admin/drivers, data loads.
+3. Refresh -> still logged in.
+4. Logout -> open /admin/drivers by URL -> redirected to /login.
+5. Log in as driver -> /admin/drivers -> "Access denied", no data.
+6. Corrupt bb_token in DevTools -> Application -> Local Storage, refresh -> logged out.
+
+Screenshots: (1) admin auto-redirected to dashboard, (2) driver blocked screen,
+(3) redirect to /login after logout.
 
 <!-- Append your block below this line after finishing a task. Format:
 
