@@ -11,7 +11,6 @@ interface DriverInfo {
   created_at: string;
 }
 
-// Colors ONLY via the CSS variables from globals.css (project convention)
 const statusColors: Record<string, string> = {
   pending: 'var(--amber)',
   verified: 'var(--success)',
@@ -24,12 +23,10 @@ export default function DriverStatusPage() {
   const [driver, setDriver] = useState<DriverInfo | null>(null);
   const [error, setError] = useState('');
 
-  // Guard 1: no session -> /login  (same pattern as the admin page)
   useEffect(() => {
     if (ready && !token) router.replace('/login');
   }, [ready, token, router]);
 
-  // Load own data ONLY when a driver session exists
   useEffect(() => {
     if (!ready || !token || role !== 'driver') return;
     (async () => {
@@ -37,8 +34,8 @@ export default function DriverStatusPage() {
         const res = await fetch('/api/driver/me', {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (res.status === 401) { logout(); return; }        // stale token
-        if (res.status === 404) {                             // logged in, never registered
+        if (res.status === 401) { logout(); return; }
+        if (res.status === 404) {
           setError('No driver profile yet — complete registration first.');
           return;
         }
@@ -51,7 +48,6 @@ export default function DriverStatusPage() {
     })();
   }, [ready, token, role, logout]);
 
-  // Guard 2: non-driver (admin) -> blocked, no API call was made
   if (ready && token && role !== 'driver') {
     return (
       <main className="p-8">
