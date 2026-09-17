@@ -2,6 +2,8 @@
 
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import styles from './page.module.css';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '../auth-context';
 
 
 export default function LoginPage() {
@@ -11,6 +13,9 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
+  const router = useRouter();
+  const { login } = useAuth();
+
 
   const set = (key: 'email' | 'password') => (e: ChangeEvent<HTMLInputElement>) =>
   setForm((current) => ({ ...current, [key]: e.target.value }));
@@ -57,7 +62,13 @@ const submit = async (e: FormEvent<HTMLFormElement>) => {
       return;
     }
 
+        login(data.token, data.role);
     setMsg(`Login successful as ${data.role}. ✅`);
+
+    if (data.role === 'admin') {
+      router.push('/admin/drivers');
+    }
+
   } catch {
     setError('Server error — is the dev server running?');
   } finally {
