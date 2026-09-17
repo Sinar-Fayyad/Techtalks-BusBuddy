@@ -62,12 +62,15 @@ const submit = async (e: FormEvent<HTMLFormElement>) => {
       return;
     }
 
-        login(data.token, data.role);
+           login(data.token, data.role);
     setMsg(`Login successful as ${data.role}. ✅`);
 
     if (data.role === 'admin') {
       router.push('/admin/drivers');
+    } else if (data.role === 'driver') {
+      router.push('/driver/status');
     }
+
 
   } catch {
     setError('Server error — is the dev server running?');
