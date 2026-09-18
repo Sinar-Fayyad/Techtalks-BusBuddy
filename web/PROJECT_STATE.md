@@ -130,6 +130,31 @@ Every teammate MUST append an update block at the end of this file before openin
 5. Log in as driver -> /admin/drivers -> "Access denied", no data.
 6. Corrupt bb_token in DevTools -> Application -> Local Storage, refresh -> logged out.
 
+## 18/09/2026 — Wassim Mahmoud — Login route : admins-only
+- Enforced admins-only access on GET /api/driver/license/[name]: valid admin tokens view license files (200), driver tokens get 403, missing/invalid tokens 401. Both Bearer-header and ?token= transports preserved.
+- New/changed: web/app/api/driver/license/[name]/route.ts (role check added); web/app/api/driver/license/route.ts restored to Sprint 1 upload behavior after an edit accident (no behavior change). No DB or endpoint changes. Upload route still accepts driver tokens — registration and mobile flows unaffected.
+
+- How it was tested: REST Client suite verified 401/403/404/400/200 across header + query-string tokens; driver blocked on normal names, traversal paths, and ?token=. Admin file viewing confirmed via header and ?token=. Verified in DB: users roles correct, drivers.license_url matches uploaded file. UI regression: admin license link opens file; driver sees Access-denied screen.
+- Gotchas others must know: the role check lives ONLY in the [name] route — the upload route must keep accepting drivers. ?token= URLs can leak into browser history/logs (out of scope, flagged). This GET endpoint is missing from API_CONTRACT.md — contract owner should add it. Local schema drifted from the team schema (status enum typo "verifide", MyISAM, missing created_at/FK) — reported to DB owner. Never commit web/.env.
+
+## Changes
+- GET /api/driver/license/[name] is now admins-only (403 for non-admins, 401 for missing/invalid tokens)
+- Bearer header and ?token= transports preserved
+- Upload route restored to Sprint 1 behavior (accepts driver tokens)
+- Added web/docs/t3-tests.http (REST Client suite)
+
+## How to test
+1. Setup: web/.env (DB port 3308, JWT_SECRET), admin + driver accounts, one registered driver with a license file
+2. Run web/docs/t3-tests.http requests 3–11 → expect 401, 401, 403, 404, 400, 403, 200, 200, 403
+3. UI: admin → /admin/drivers → license link opens; driver → Access denied
+
+Screenshots attached (API responses + both UI screens).
+
+## Flags for reviewers
+- This endpoint is undocumented in API_CONTRACT.md — needs a section (owner: ?)
+- ?token= in URLs is a history/log leak risk — future hardening task?
+
+
 Screenshots: (1) admin auto-redirected to dashboard, (2) driver blocked screen,
 (3) redirect to /login after logout.
 
