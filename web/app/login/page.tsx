@@ -117,7 +117,7 @@ const submit = async (e: FormEvent<HTMLFormElement>) => {
         {msg && <p className={styles.success}>{msg}</p>}
         {error && <p className={styles.error}>{error}</p>}
                 <p style={{ color: 'var(--bb-text-dim)', textAlign: 'center', marginTop: '16px', fontSize: '14px' }}>
-          Don't have an account?{' '}
+          Don't have an account?{''}
           <a href="/driver/register" style={{ color: 'var(--bb-link)', fontWeight: 600, textDecoration: 'none' }}>
             Create Account
           </a>
