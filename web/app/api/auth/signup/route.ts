@@ -22,7 +22,9 @@ export async function POST(req: Request) {
     );
 
     return NextResponse.json({ message: 'User created', userId: result.insertId }, { status: 201 });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    } catch (err) {
+    
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
+
 }
