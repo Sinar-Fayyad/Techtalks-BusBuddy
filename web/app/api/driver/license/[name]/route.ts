@@ -15,6 +15,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ name: st
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
+    if (payload.role !== 'admin') {
+      return NextResponse.json({ error: 'Admins only' }, { status: 403 });
+    }
+
     const { name } = await params;
     if (name.includes('..') || name.includes('/')) {
       return NextResponse.json({ error: 'Bad name' }, { status: 400 });
@@ -22,7 +26,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ name: st
 
     const filePath = path.join(process.cwd(), 'uploads', name);
     const data = await readFile(filePath);
-    return new NextResponse(new Uint8Array(data)); // admin appends their token to view
+    return new NextResponse(new Uint8Array(data));
   } catch {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }

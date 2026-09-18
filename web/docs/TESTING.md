@@ -65,3 +65,20 @@ git commit -m "Login Page: add login form with validation and error handling"
 git commit -m "Login Page: add login test checklist entries"
 git push -u origin feature/login-page
 # then open the PR into dev
+
+## Sprint 2 — T3 License viewing admins-only
+
+| # | Test | Steps | Expected | Result |
+|---|------|-------|----------|--------|
+| 26 | No token | GET /api/driver/license/x.jpg | 401 "Invalid token" | ✅ |
+| 27 | Invalid token | GET with "Bearer garbage" | 401 | ✅ |
+| 28 | Driver token blocked | GET with driver Bearer token | 403 "Admins only" | ✅ |
+| 29 | Admin, missing file | GET nonexistent name with admin token | 404 "Not found" | ✅ |
+| 30 | Path traversal blocked | GET /license/..%2Fsecret with admin token | 400 "Bad name" | ✅ |
+| 31 | Driver + traversal | same with driver token | 403 "Admins only" | ✅ |
+| 32 | Admin views file | GET real filename with admin Bearer | 200 + file | ✅ |
+| 33 | Admin via ?token= | GET real file?token=<admin> | 200 + file | ✅ |
+| 34 | Driver via ?token= | GET real file?token=<driver> | 403 "Admins only" | ✅ |
+| 35 | Admin UI link | /admin/drivers → click license | file opens in new tab | ⬜ |
+| 36 | Driver UI blocked | driver opens /admin/drivers | "Access denied" screen | ⬜ |
+
