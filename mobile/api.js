@@ -1,4 +1,4 @@
-export const BASE_URL = 'http://192.168.10.33:3000'; // ← ipconfig IPv4 if different
+export const BASE_URL = 'http://192.168.2.165:3000'; // ← ipconfig IPv4 if different
 
 export async function loginRequest(email, password) {
   const res = await fetch(`${BASE_URL}/api/auth/login`, {

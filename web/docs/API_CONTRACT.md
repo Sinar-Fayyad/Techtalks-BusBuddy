@@ -1,39 +1,53 @@
-# BusBuddy API Contract — Sprint 1 (v1)
+# BusBuddy API Contract — v2 (18/09)
 
-Base URL: `http://localhost:3000/api — all bodies are JSON. Auth endpoints return a JWT; protected endpoints need header Authorization: Bearer <token>`.
+Base URL: `http://localhost:3000/api` — all bodies JSON.
+Auth: protected endpoints need header Authorization: `Bearer <token>`.
+Token payload: { "userId": number, "role": "admin"|"driver" } — signed JWT_SECRET, 7d.
+Rule: an endpoint that isn't here must NOT be called — add it here first, in the same PR.
 
 1. POST /auth/signup
-Creates a user. Role defaults to driver if omitted.
+Body: { name, email, password, role? "admin"|"driver" } — role defaults to driver.
+201: { message, userId } · 400 missing fields · 409 email exists · 500
 
-Body: { "name": string, "email": string, "password": string, "role"?: "admin"|"driver" }
-201: { "message": "User created", "userId": number }
-Errors: 400 missing fields · 409 email exists · 500 server error
 2. POST /auth/login
-Body: { "email": string, "password": string }
-200: { "message": "Login OK", "token": JWT, "role": "admin"|"driver" }
-Errors: 401 invalid credentials · 500
-3. GET /admin/drivers 🔒 admin only
-Lists drivers with status = pending, newest first.
+Body: { email, password }
+200: { message, token, role } · 401 invalid credentials · 500
 
-200: { "drivers": [{ "id", "name", "email", "license_url", "status", "created_at" }] }
-Errors: 401 no/invalid token · 403 not admin · 500
-4. POST /driver/profile 🔒 driver only
-Creates the driver profile (one per user).
+3. GET /admin/drivers 🔒 admin
+Pending drivers, newest first.
+200: { drivers: [{ id, name, email, license_url, status, created_at }] } · 401 · 403
 
-Headers: Bearer token
-Body: { "license_url": string }
-201: { "message": "Driver profile created, pending review" }
-Errors: 400 missing license_url · 401 · 409 profile exists · 500
-5. PATCH /admin/drivers/{id} 🔒 admin only
-Approves or rejects a pending driver.
+4. POST /driver/profile 🔒 driver
+Body: { license_url } — creates driver row, status=pending.
+201: { message } · 400 · 401 · 409 profile exists
 
-Body: { "action": "verify" | "reject" }
-200: { "message": "Driver verified" | "Driver rejected" }
-Errors: 400 bad action · 401 · 403 · 404 driver not found · 500
-All endpoints implemented and tested (Postman + UI). Planned v2 additions: license file upload (multipart), GET /drivers/me, refresh tokens.
-6. GET /driver/me 🔒 driver only
-Returns the logged-in driver's own profile + registration status.
-Headers: Bearer token
-200: { "driver": { "name", "email", "status", "license_url", "created_at" } }
-Errors: 401 no/invalid token · 403 not a driver · 404 no profile yet · 500
+5. PATCH /admin/drivers/{id} 🔒 admin
+Body: { action: "verify" | "reject" }
+200: { message } · 400 bad action · 401 · 403 · 404
 
+6. GET /driver/me 🔒 driver
+The caller's own profile (JOIN users+drivers by token userId — no URL id).
+200: { driver: { name, email, status, license_url, created_at } } · 401 · 403 (admin) · 404 no profile
+
+7. POST /driver/license 🔒 driver
+Multipart form-data, field "file". PDF/JPG/PNG only, max 5MB. Stores in web/uploads/.
+201: `{ path: "/uploads/<name>" }` · 400 no file / bad type / too big · 401 · 500
+
+8. GET /driver/license/{name} 🔒 token required (Bearer header OR ?token=)
+Permission: admin = any file · driver = ONLY the file in their own drivers.license_url.
+200: file bytes · 400 bad name (path traversal) · 401 · 403 · 404 not found
+⚠️ Known caveat: ?token= URLs can leak into browser history — Bearer preferred.
+
+9. POST /driver/trips/start 🔒 verified driver
+Starts a trip. Times stored/returned UTC.
+201: trip { id, driver_id, start_time, end_time: null } · 401 · 403 unverified/not driver · 404 no profile · 409 trip already active
+
+10. POST /driver/trips/stop 🔒 driver
+Ends the caller's active trip (no verified-check by design — must be able to end it).
+200: trip with end_time set · 401 · 404 no active trip
+
+11. GET /admin/drivers/{id}/trips 🔒 admin
+All trips of one driver, newest first.
+200: { trips: [{ id, driver_id, start_time, end_time, created_at }] } · 400 non-numeric id · 401 · 403 · 404 unknown driver
+
+Planned: refresh tokens, driver profile edit (PATCH /driver/me), live GPS pings.

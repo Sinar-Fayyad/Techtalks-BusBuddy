@@ -21,6 +21,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ message: 'Login OK', token, role: user.role });
   } catch (err: any) {
+    console.error('SIGNUP ERROR:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

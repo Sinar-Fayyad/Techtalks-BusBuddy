@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { loginRequest } from './api';
 
-export default function LoginScreen({ onLogin }) {
+export default function LoginScreen({ onLogin, onGoRegister }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -61,6 +61,10 @@ export default function LoginScreen({ onLogin }) {
           ? <ActivityIndicator color="#fff" />
           : <Text style={s.buttonText}>Log in</Text>}
       </TouchableOpacity>
+
+      <TouchableOpacity onPress={onGoRegister}>
+        <Text style={s.registerLink}>New driver? Create an account</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -73,4 +77,5 @@ const s = StyleSheet.create({
   error: { color: '#ef4444', textAlign: 'center', marginBottom: 12 },
   button: { backgroundColor: '#f59e0b', borderRadius: 24, paddingVertical: 14, alignItems: 'center', marginTop: 8 },
   buttonText: { color: '#0f172a', fontWeight: '700', fontSize: 16 },
+  registerLink: { color: '#08d9d6', textAlign: 'center', marginTop: 16 },
 });
