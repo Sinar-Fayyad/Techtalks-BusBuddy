@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../auth-context';
+import Button from '@/components/Button';
+
 
 export default function AdminDriversPage() {
   const router = useRouter();
@@ -54,42 +56,41 @@ export default function AdminDriversPage() {
     return (
       <main className="p-8">
         <h1 className="text-2xl font-bold">Access denied</h1>
-        <p className="mt-2 text-gray-600">This page is for admins only.</p>
-        <button className="bg-gray-700 text-white p-2 rounded mt-4" onClick={logout}>
-          Log out
-        </button>
+        <p className="mt-2 tyle={{ color: 'var(--text-muted)' }}text-gray-600">This page is for admins only.</p>
+                <Button color="primary" onClick={logout}>Log out</Button>
+
       </main>
     );
   }
 
   // Small placeholder while the session is being read from localStorage
   if (!ready || !token) {
-    return <main className="p-8"><p className="text-gray-500">Checking session…</p></main>;
+    return <main className="p-8"><p className="text-gray-500 style={{ color: 'var(--text-muted)' }} style={{ color: 'var(--text-muted)' }}">Checking session…</p></main>;
   }
 
   return (
     <main className="p-8">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Pending Drivers</h1>
-        <button className="bg-gray-700 text-white p-2 rounded" onClick={logout}>
-          Logout
-        </button>
+                <Button color="primary" onClick={logout}>Logout</Button>
+
       </div>
-      {error && <p className="text-red-600 mt-2">{error}</p>}
+      {error && <p className="text-red-600 mt-2 style={{ color: 'var(--danger)' }}">{error}</p>}
       {drivers.length === 0 && !error && <p className="text-gray-500 mt-4">No pending drivers 🎉</p>}
       <ul className="mt-4 space-y-2">
         {drivers.map((d) => (
           <li key={d.id} className="border p-3 flex justify-between items-center">
             <span>
               {d.name} — {d.email} —{' '}
-              <a className="text-blue-500 underline" href={licenseHref(d.license_url)} target="_blank">
+              <a className="text-blue-500 underline style={{ color: 'var(--navy)' }}" href={licenseHref(d.license_url)} target="_blank">
                 license
               </a>
             </span>
-            <span>
-              <button className="bg-green-600 text-white p-1 rounded mr-2" onClick={() => act(d.id, 'verify')}>Verify</button>
-              <button className="bg-red-600 text-white p-1 rounded" onClick={() => act(d.id, 'reject')}>Reject</button>
-            </span>
+                          <span className="flex gap-2">
+                <Button color="success" onClick={() => act(d.id, 'verify')}>Verify</Button>
+                <Button color="danger" onClick={() => act(d.id, 'reject')}>Reject</Button>
+              </span>
+
           </li>
         ))}
       </ul>
