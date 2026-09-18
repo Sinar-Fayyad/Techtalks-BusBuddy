@@ -55,17 +55,15 @@ export default function AdminDriversPage() {
     return (
       <main className="p-8">
         <h1 className="text-2xl font-bold">Access denied</h1>
-        <p className="mt-2 text-gray-600">This page is for admins only.</p>
-        <button className="bg-gray-700 text-white p-2 rounded mt-4" onClick={logout}>
-          Log out
-        </button>
+        <p className="mt-2" style={{ color: 'var(--text-muted)' }}>This page is for admins only.</p>
+        <Button color="primary" onClick={logout}>Log out</Button>
       </main>
     );
   }
 
   // Small placeholder while the session is being read from localStorage
   if (!ready || !token) {
-    return <main className="p-8"><p className="text-gray-500">Checking session…</p></main>;
+    return <main className="p-8"><p style={{ color: 'var(--text-muted)' }}>Checking session…</p></main>;
   }
 
   return (

@@ -31,4 +31,9 @@ Body: { "action": "verify" | "reject" }
 200: { "message": "Driver verified" | "Driver rejected" }
 Errors: 400 bad action · 401 · 403 · 404 driver not found · 500
 All endpoints implemented and tested (Postman + UI). Planned v2 additions: license file upload (multipart), GET /drivers/me, refresh tokens.
+6. GET /driver/me 🔒 driver only
+Returns the logged-in driver's own profile + registration status.
+Headers: Bearer token
+200: { "driver": { "name", "email", "status", "license_url", "created_at" } }
+Errors: 401 no/invalid token · 403 not a driver · 404 no profile yet · 500
 

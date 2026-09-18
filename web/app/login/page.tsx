@@ -62,12 +62,15 @@ const submit = async (e: FormEvent<HTMLFormElement>) => {
       return;
     }
 
-        login(data.token, data.role);
+           login(data.token, data.role);
     setMsg(`Login successful as ${data.role}. ✅`);
 
     if (data.role === 'admin') {
       router.push('/admin/drivers');
+    } else if (data.role === 'driver') {
+      router.push('/driver/status');
     }
+
 
   } catch {
     setError('Server error — is the dev server running?');
@@ -79,8 +82,9 @@ const submit = async (e: FormEvent<HTMLFormElement>) => {
   return (
     <main className={styles.page}>
       <div className={styles.card}>
-        <h1 className={styles.title}>Welcome Back!</h1>
-        <p className={styles.subtitle}>Log in to continue your journey.</p>
+               <h1 className={styles.title}>Welcome Back</h1>
+        <p className={styles.subtitle}>Sign in to continue to BusBuddy</p>
+
 
         <form onSubmit={submit} noValidate>
           <div className={styles.field}>
@@ -106,12 +110,19 @@ const submit = async (e: FormEvent<HTMLFormElement>) => {
           {fieldError.password && <p className={styles.fieldError}>{fieldError.password}</p>}
 
           <button type="submit" className={styles.submit} disabled={loading}>
-            {loading ? 'Logging in...' : 'Log In →'}
+                        {loading ? 'Signing in...' : 'Sign In →'}
           </button>
         </form>
 
         {msg && <p className={styles.success}>{msg}</p>}
         {error && <p className={styles.error}>{error}</p>}
+                <p style={{ color: 'var(--bb-text-dim)', textAlign: 'center', marginTop: '16px', fontSize: '14px' }}>
+          Don't have an account?{' '}
+          <a href="/driver/register" style={{ color: 'var(--bb-link)', fontWeight: 600, textDecoration: 'none' }}>
+            Create Account
+          </a>
+        </p>
+
       </div>
     </main>
   );

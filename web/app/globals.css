@@ -6,6 +6,7 @@
   --grey: #F2F4F7;
   --danger: #dc2626;
   --success: #16a34a;
+  --text-muted: #6b7280;
 
   --bb-card-bg-fallback: rgba(16, 26, 118, 0.94);
   --bb-bg-gradient: linear-gradient(160deg, #08d9d6 0%, #243bdb 45%, #b000ff 100%);
@@ -16,4 +17,6 @@
   --bb-text: #ffffff;
   --bb-text-dim: rgba(255, 255, 255, 0.75);
   --bb-error: #ff6b6b;
+  --bb-link: #08d9d6;
+
 }
