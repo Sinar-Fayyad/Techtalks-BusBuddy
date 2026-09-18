@@ -161,10 +161,10 @@ admin and a driver account via POST /api/auth/signup.
 
 ## 2026-09-17 — Tamara — T7 - Driver my Status Page
 - Added GET /api/driver/me (web/app/api/driver/me/route.ts): verifies the JWT from the
-Authorization header, rejects non-driver roles (403), and returns only the caller's own
-driver row (JOIN users+drivers filtered by user_id from the token payload). No ID is
-accepted from the URL, so a driver can never fetch another driver's data. 404 when a
-driver account has no profile row yet. Contract section 6 added (Sino approved).
+  Authorization header, rejects non-driver roles (403), and returns only the caller's own
+  driver row (JOIN users+drivers filtered by user_id from the token payload). No ID is
+  accepted from the URL, so a driver can never fetch another driver's data. 404 when a
+  driver account has no profile row yet. Contract section 6 added (Sino approved).
 - New/changed: web/app/api/driver/me/route.ts (new); web/app/driver/status/page.tsx (new —
 session guards reusing the T2 auth context: no session -> /login, non-driver -> Access
 denied with no API call, 401 -> auto-logout; shows name, email, color-coded status and
@@ -216,6 +216,7 @@ a "View license file" link using the driver's own token.
   --success, --danger). Sino wants a follow-up "driver profile edit" task (name, phone,
   schedule, price, trips) — requires new DB columns and a PATCH endpoint; should be its
   own card, not part of T7.
+  
 ## Changes
 - New endpoint GET /api/driver/me: JWT-verified, drivers-only (admins get 403), returns
   the caller's own driver row — users+drivers JOIN filtered by user_id from the token.
@@ -233,7 +234,7 @@ a "View license file" link using the driver's own token.
 2. Login as admin -> go to /driver/status -> "Access denied".
 3. Login as a driver with no profile -> "No driver profile yet" message.
 4. Register a new driver at /driver/register -> login -> auto-lands on /driver/status
-showing PENDING with own name/email/license info.
+   showing PENDING with own name/email/license info.
 5. Admin verifies the driver (second tab) -> driver refreshes -> status shows VERIFIED.
 6. F12 -> Network -> the me response contains only the token owner's data.
 
@@ -265,6 +266,8 @@ Screenshots attached (API responses + both UI screens).
    showing PENDING with own name/email/license info.
 5. Admin verifies the driver (second tab) -> driver refreshes -> status shows VERIFIED.
 6. F12 -> Network -> the me response contains only the token owner's data.
+
+
 ## 2026-09-18 — Tamara — T9 — Design cleanup (code)
 - Styling-only cleanup across the web app: raw <button> elements replaced with the shared
   Button component, all hardcoded colors removed from .tsx/.module.css files, and the two
