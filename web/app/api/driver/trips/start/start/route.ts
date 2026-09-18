@@ -15,11 +15,11 @@ import pool from '@/lib/db';
       payload = jwt.verify(auth.split(' ')[1], process.env.JWT_SECRET!);
     } catch {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    
+    }
     if (payload.role !== 'driver') {
       return NextResponse.json({ error: 'Not a driver' }, { status: 403 });
     }
-    
+
     // --- 2. TRANSACTION + LOCK: makes double-start impossible ---
     const conn = await pool.getConnection();
     try {
@@ -74,3 +74,4 @@ import pool from '@/lib/db';
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
