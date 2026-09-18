@@ -57,6 +57,8 @@ export default function AdminDriversPage() {
         <h1 className="text-2xl font-bold">Access denied</h1>
         <p className="mt-2" style={{ color: 'var(--text-muted)' }}>This page is for admins only.</p>
         <Button color="primary" onClick={logout}>Log out</Button>
+
+
       </main>
     );
   }
@@ -92,4 +94,3 @@ export default function AdminDriversPage() {
       </ul>
     </main>
   );
-}
