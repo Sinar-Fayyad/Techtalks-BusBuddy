@@ -175,6 +175,66 @@ Every teammate MUST append an update block at the end of this file before openin
    showing PENDING with own name/email/license info.
 5. Admin verifies the driver (second tab) -> driver refreshes -> status shows VERIFIED.
 6. F12 -> Network -> the me response contains only the token owner's data.
+## 2026-09-18 — Tamara — T9 — Design cleanup (code)
+- Styling-only cleanup across the web app: raw <button> elements replaced with the shared
+  Button component, all hardcoded colors removed from .tsx/.module.css files, and the two
+  mockup criteria completed: /login matches Dana's T10 Sign In screen (Welcome Back /
+  Sign In wording, Create Account link to /driver/register) and /driver/status matches the
+  T11 My Status mockups (dark gradient background, glass cards, per-state icon/headline/
+  message with checklist, License Information card). A repo-wide color audit returns hits
+  in globals.css only.
+- New/changed: web/app/globals.css (added --text-muted: #6b7280, --bb-link: #08d9d6);
+  web/components/Input/Input.module.css (border #ccc -> var(--grey)); web/app/admin/drivers/
+  page.tsx (Button for Verify/Reject/Logout, colors via variables); web/app/driver/status/
+  page.tsx (Button, variables, restyled to T11 mockup); web/app/driver/register/page.tsx
+  (status messages use --success/--danger); web/app/login/page.tsx (T10 wording + Create
+  Account link); web/app/page.tsx (Next.js scaffold welcome page replaced with a minimal
+  BusBuddy landing page — approved by Sino). No endpoints, no DB changes, no behavior
+  changes: guards, fetches, handlers untouched.
+- How it was tested (2026-09-17/18): after each page refactor its behavior was re-tested —
+  admin: list loads, Verify/Reject/Logout work; driver: status loads in all data states,
+  license file link opens, admin on the page still gets "Access denied"; register:
+  success/error messages show; login: valid login redirects, wrong password errors.
+  Final color audit (regex over web/app + web/components) returns matches in globals.css
+  only. T10 skipped: Forgot Password, back arrow (no corresponding features/endpoints).
+  T11 skipped: License No/Expiry (no DB columns), Re-upload License/Start Driving buttons
+  (no endpoints).
+- Gotchas others must know: Tailwind color classes (text-gray-500, bg-green-600, ...) are
+  banned — use CSS variables, e.g. style={{ color: 'var(--text-muted)' }}. Two variables
+  added: --text-muted (muted grey text) and --bb-link (cyan links on dark backgrounds).
+  The landing page (/) is a client component because Button only supports onClick (no
+  href). audit.txt at the repo root is a throwaway diagnostic file — never commit it.
+## Changes
+- All pages use the shared Button component (admin Verify/Reject/Logout, driver status
+  Log out, landing page buttons).
+- Zero hardcoded colors outside globals.css: Tailwind color classes and inline hexes
+  replaced with CSS variables. Two variables added: --text-muted, --bb-link. Input
+  border now uses var(--grey).
+- /login matches Dana's T10 Sign In mockup: "Welcome Back" / "Sign in to continue to
+  BusBuddy" / "Sign In →" gradient pill button (existing T1 styling), plus a
+  "Don't have an account? Create Account" link to /driver/register.
+  Skipped: Forgot Password, back arrow — no corresponding features/endpoints exist.
+- /driver/status matches Dana's T11 My Status mockups: dark gradient background, two
+  glass cards, per-state display (pending: ⏳ "Under review" amber; verified: ✅
+  "Verification Approved" green; rejected: ❌ "Verification Rejected" red), progress
+  checklist (Profile created, License uploaded, Admin review, Go live), License
+  Information card. Skipped: License No/Expiry (no DB columns), Re-upload/Start Driving
+  (no endpoints).
+- Next.js scaffold welcome page replaced with a minimal BusBuddy landing page
+  (approved by Sino).
+- No behavior changes: guards, fetches, and handlers are unchanged.
+
+## How to test
+1. npm run dev → localhost:3000 → BusBuddy landing page; "Log in" and "Driver
+   registration" buttons navigate.
+2. /login matches the T10 mockup; "Create Account" opens /driver/register; valid login
+   still redirects by role; wrong password still shows an error.
+3. Admin login → /admin/drivers → list loads; Verify/Reject/Logout work.
+4. Driver login → /driver/status → T11-style page; "View license file" opens the file;
+   admin opening /driver/status gets "Access denied".
+5. /driver/register → success message green, error message red.
+6. Color audit over web/app + web/components returns matches in globals.css only.
+
 
 <!-- Append your block below this line after finishing a task. Format:
 

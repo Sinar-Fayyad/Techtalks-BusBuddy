@@ -94,8 +94,9 @@ export default function DriverRegister() {
           {loading ? 'Registering...' : 'Register'}
         </Button>
       </form>
-      {msg && <p className="text-green-600 mt-4">{msg}</p>}
-      {error && <p className="text-red-600 mt-4">{error}</p>}
+      {msg && <p className="mt-4" style={{ color: 'var(--success)' }}>{msg}</p>}
+{error && <p className="mt-4" style={{ color: 'var(--danger)' }}>{error}</p>}
+
     </main>
   );
 }
