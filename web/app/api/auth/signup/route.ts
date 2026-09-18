@@ -23,7 +23,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ message: 'User created', userId: result.insertId }, { status: 201 });
     } catch (err) {
-    
+    console.error('SIGNUP ERROR:', err);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 

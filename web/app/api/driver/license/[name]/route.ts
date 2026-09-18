@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { readFile } from 'fs/promises';
 import path from 'path';
+import pool from '@/lib/db';
 
 export async function GET(req: Request, { params }: { params: Promise<{ name: string }> }) {
   try {
@@ -15,13 +16,26 @@ export async function GET(req: Request, { params }: { params: Promise<{ name: st
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    if (payload.role !== 'admin') {
-      return NextResponse.json({ error: 'Admins only' }, { status: 403 });
+    const { name } = await params;
+    if (name.includes('..') || name.includes('/') || name.includes('\\')) {
+      return NextResponse.json({ error: 'Bad name' }, { status: 400 });
     }
 
-    const { name } = await params;
-    if (name.includes('..') || name.includes('/')) {
-      return NextResponse.json({ error: 'Bad name' }, { status: 400 });
+    const userId = payload.userId ?? payload.id ?? payload.sub;
+
+    if (payload.role === 'admin') {
+      // admins can view any license
+    } else if (payload.role === 'driver') {
+      const [rows]: any = await pool.query(
+        'SELECT license_url FROM drivers WHERE user_id = ? LIMIT 1',
+        [userId]
+      );
+      const own = rows?.[0];
+      if (!own || path.basename(own.license_url) !== name) {
+        return NextResponse.json({ error: 'Admins only' }, { status: 403 });
+      }
+    } else {
+      return NextResponse.json({ error: 'Admins only' }, { status: 403 });
     }
 
     const filePath = path.join(process.cwd(), 'uploads', name);
