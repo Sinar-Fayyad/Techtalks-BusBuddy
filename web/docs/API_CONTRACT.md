@@ -37,3 +37,24 @@ Headers: Bearer token
 200: { "driver": { "name", "email", "status", "license_url", "created_at" } }
 Errors: 401 no/invalid token · 403 not a driver · 404 no profile yet · 500
 
+7. POST /driver/trips/start 🔒 driver only
+Starts a new trip for the logged-in driver (driver must be verified).
+
+Headers: Bearer token
+Body: none — driver_id comes from the token
+201: { "message": "Trip started", "trip": { "id", "driver_id", "start_time", "end_time": null } }
+Errors: 401 no/invalid token · 403 not a driver / not verified · 404 no driver profile · 409 active trip already exists · 500
+
+8. POST /driver/trips/stop 🔒 driver only
+Stops the driver's active trip by setting end_time.
+
+Headers: Bearer token
+Body: none
+200: { "message": "Trip stopped", "trip": { "id", "driver_id", "start_time", "end_time" } }
+Errors: 401 no/invalid token · 403 not a driver · 404 no active trip · 500
+
+9. GET /admin/drivers/{id}/trips 🔒 admin only
+Lists all trips for one driver, newest first. All times are UTC.
+
+200: { "trips": [{ "id", "driver_id", "start_time", "end_time", "created_at" }] } — empty array if no trips
+Errors: 400 invalid driver id · 401 no/invalid token · 403 not admin · 404 driver not found · 500
