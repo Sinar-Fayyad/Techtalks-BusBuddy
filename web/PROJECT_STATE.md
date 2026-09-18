@@ -28,7 +28,7 @@ Every teammate MUST append an update block at the end of this file before openin
 ## Mobile (existing)
 
 - Single file mobile/App.js — driver registration with gallery photo pick
-  (expo-image-picker) + upload (expo-file-system/legacy), same API as web
+(expo-image-picker) + upload (expo-file-system/legacy), same API as web
 
 ## Conventions (must follow)
 
@@ -85,50 +85,96 @@ Every teammate MUST append an update block at the end of this file before openin
 
 ## 2026-09-17 — Tamara — T2 — Auth session (web)
 - Added a client-side auth context (web/app/auth-context.tsx) that stores the JWT and role
-  returned by POST /api/auth/login in localStorage (keys: bb_token, bb_role) and restores
-  them on refresh. The login page now calls login() on success and redirects admins to
-  /admin/drivers. The /admin/drivers page no longer uses the manual token paste-box: it
-  reads the session, redirects to /login when no session exists, shows an "Access denied"
-  screen with no API call for non-admin roles, auto-logs-out on 401, and has a Logout button.
+returned by POST /api/auth/login in localStorage (keys: bb_token, bb_role) and restores
+them on refresh. The login page now calls login() on success and redirects admins to
+/admin/drivers. The /admin/drivers page no longer uses the manual token paste-box: it
+reads the session, redirects to /login when no session exists, shows an "Access denied"
+screen with no API call for non-admin roles, auto-logs-out on 401, and has a Logout button.
 - New/changed: web/app/auth-context.tsx (new); web/app/layout.tsx (children wrapped in
-  AuthProvider); web/app/login/page.tsx (stores session, admin redirect); web/app/admin/drivers/page.tsx
-  (session guards, logout). No new endpoints, no DB changes, shared components untouched.
+AuthProvider); web/app/login/page.tsx (stores session, admin redirect); web/app/admin/drivers/page.tsx
+(session guards, logout). No new endpoints, no DB changes, shared components untouched.
 - How it was tested (all on 2026-09-17): 1) admin login -> auto-redirect to /admin/drivers;
-  2) browser refresh -> session restored, still logged in; 3) logout -> opening
-  /admin/drivers by URL redirects to /login; 4) driver login -> /admin/drivers shows
-  "Access denied" with no data and no API call; 5) wrong password -> 401 error, stays on
-  /login (T1 behavior unchanged). Accounts created via POST /api/auth/signup and verified
-  in the database (roles correct).
+2) browser refresh -> session restored, still logged in; 3) logout -> opening
+/admin/drivers by URL redirects to /login; 4) driver login -> /admin/drivers shows
+"Access denied" with no data and no API call; 5) wrong password -> 401 error, stays on
+/login (T1 behavior unchanged). Accounts created via POST /api/auth/signup and verified
+in the database (roles correct).
 - Gotchas others must know: localStorage keys are bb_token/bb_role (the old admin_token
-  key is abandoned). The admin page waits for a `ready` flag before redirecting — without
-  it a refresh briefly sees token=null and falsely redirects to /login. The schema SQL
-  shared in chat names the password column `password` but the signup/login routes use
-  `password_hash` — local DBs need the column named password_hash (ALTER TABLE
-  BusBuddy_app.users CHANGE password password_hash VARCHAR(255) NOT NULL); the committed
-  schema should be reconciled with the code. Local setup also requires web/.env with
-  DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, JWT_SECRET (JWT_SECRET is required by all
-  protected routes). T4 also edits web/app/admin/drivers/page.tsx — whoever merges second
-  may need to resolve small conflicts.
+key is abandoned). The admin page waits for a `ready` flag before redirecting — without
+it a refresh briefly sees token=null and falsely redirects to /login. The schema SQL
+shared in chat names the password column `password` but the signup/login routes use
+`password_hash` — local DBs need the column named password_hash (ALTER TABLE
+BusBuddy_app.users CHANGE password password_hash VARCHAR(255) NOT NULL); the committed
+schema should be reconciled with the code. Local setup also requires web/.env with
+DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, JWT_SECRET (JWT_SECRET is required by all
+protected routes). T4 also edits web/app/admin/drivers/page.tsx — whoever merges second
+may need to resolve small conflicts.
 
 ## Changes
 - New AuthProvider (web/app/auth-context.tsx): holds token + role in React state,
-  persisted in localStorage (bb_token / bb_role), restored on refresh.
+persisted in localStorage (bb_token / bb_role), restored on refresh.
 - web/app/layout.tsx: app wrapped in AuthProvider.
 - Login page: stores token/role after successful POST /api/auth/login; admins are
-  redirected to /admin/drivers.
+redirected to /admin/drivers.
 - Admin drivers page: manual token paste-box removed. Session-based instead:
-  no session -> redirect to /login; driver token -> "Access denied" with zero API
-  calls; 401 (stale/invalid token) -> auto-logout -> /login; Logout button clears
-  the session.
+no session -> redirect to /login; driver token -> "Access denied" with zero API
+calls; 401 (stale/invalid token) -> auto-logout -> /login; Logout button clears
+the session.
 
 ## How to test
 1. Set up web/.env (DB + JWT_SECRET) and the BusBuddy_app schema, then create an
-   admin and a driver account via POST /api/auth/signup.
+admin and a driver account via POST /api/auth/signup.
 2. Log in as admin at /login -> lands on /admin/drivers, data loads.
 3. Refresh -> still logged in.
 4. Logout -> open /admin/drivers by URL -> redirected to /login.
 5. Log in as driver -> /admin/drivers -> "Access denied", no data.
 6. Corrupt bb_token in DevTools -> Application -> Local Storage, refresh -> logged out.
+
+## 2026-09-17 — Tamara — T7 - Driver my Status Page
+- Added GET /api/driver/me (web/app/api/driver/me/route.ts): verifies the JWT from the
+Authorization header, rejects non-driver roles (403), and returns only the caller's own
+driver row (JOIN users+drivers filtered by user_id from the token payload). No ID is
+accepted from the URL, so a driver can never fetch another driver's data. 404 when a
+driver account has no profile row yet. Contract section 6 added (Sino approved).
+- New/changed: web/app/api/driver/me/route.ts (new); web/app/driver/status/page.tsx (new —
+session guards reusing the T2 auth context: no session -> /login, non-driver -> Access
+denied with no API call, 401 -> auto-logout; shows name, email, color-coded status and
+license info); web/app/login/page.tsx (drivers now redirect to /driver/status after
+login; admin redirect unchanged); web/docs/API_CONTRACT.md (section 6, GET /driver/me).
+No DB changes, no changes to shared components.
+- How it was tested (2026-09-17): 1) logged-out -> /driver/status redirects to /login;
+2) admin -> "Access denied" screen, no data; 3) driver with no profile -> "No driver
+profile yet" message; 4) new driver registered via /driver/register -> login ->
+auto-lands on /driver/status showing PENDING (amber) with own name/email/license name;
+5) admin verified the driver -> page refresh shows VERIFIED (green); 6) F12 Network:
+the /api/driver/me response contains only the token owner's row (privacy verified).
+- Gotchas others must know: /api/driver/me accepts the token via header only (no URL
+param) — it serves the logged-in driver's own page. Viewing the license file reuses the
+existing /api/driver/license/[name] endpoint with the driver's own token; Sino
+confirmed drivers may view their own file. Status colors use CSS variables (--amber,
+--success, --danger). Sino wants a follow-up "driver profile edit" task (name, phone,
+schedule, price, trips) — requires new DB columns and a PATCH endpoint; should be its
+own card, not part of T7.
+## Changes
+- New endpoint GET /api/driver/me: JWT-verified, drivers-only (admins get 403), returns
+the caller's own driver row — users+drivers JOIN filtered by user_id from the token.
+No URL parameter involved, so cross-driver access is impossible by design. 404 if the
+account has no profile yet.
+- New page /driver/status: reuses the T2 auth context — no session -> redirect to /login;
+non-driver -> "Access denied" screen with no API call; 401 -> auto-logout. Shows name,
+email, status (amber/green/red via CSS variables), license name + submission date, and
+a "View license file" link using the driver's own token.
+- Login page: drivers redirect to /driver/status after login (admin redirect unchanged).
+- API_CONTRACT.md: section 6 (GET /driver/me) added — approved by Sino.
+
+## How to test
+1. Logged out -> open /driver/status -> redirected to /login.
+2. Login as admin -> go to /driver/status -> "Access denied".
+3. Login as a driver with no profile -> "No driver profile yet" message.
+4. Register a new driver at /driver/register -> login -> auto-lands on /driver/status
+showing PENDING with own name/email/license info.
+5. Admin verifies the driver (second tab) -> driver refreshes -> status shows VERIFIED.
+6. F12 -> Network -> the me response contains only the token owner's data.
 
 ## 18/09/2026 — Wassim Mahmoud — Login route : admins-only
 - Enforced admins-only access on GET /api/driver/license/[name]: valid admin tokens view license files (200), driver tokens get 403, missing/invalid tokens 401. Both Bearer-header and ?token= transports preserved.
@@ -155,8 +201,66 @@ Screenshots attached (API responses + both UI screens).
 - ?token= in URLs is a history/log leak risk — future hardening task?
 
 
-Screenshots: (1) admin auto-redirected to dashboard, (2) driver blocked screen,
-(3) redirect to /login after logout.
+## 2026-09-18 — Tamara — T9 — Design cleanup (code)
+- Styling-only cleanup across the web app: raw <button> elements replaced with the shared
+  Button component, all hardcoded colors removed from .tsx/.module.css files, and the two
+  mockup criteria completed: /login matches Dana's T10 Sign In screen (Welcome Back /
+  Sign In wording, Create Account link to /driver/register) and /driver/status matches the
+  T11 My Status mockups (dark gradient background, glass cards, per-state icon/headline/
+  message with checklist, License Information card). A repo-wide color audit returns hits
+  in globals.css only.
+- New/changed: web/app/globals.css (added --text-muted: #6b7280, --bb-link: #08d9d6);
+  web/components/Input/Input.module.css (border #ccc -> var(--grey)); web/app/admin/drivers/
+  page.tsx (Button for Verify/Reject/Logout, colors via variables); web/app/driver/status/
+  page.tsx (Button, variables, restyled to T11 mockup); web/app/driver/register/page.tsx
+  (status messages use --success/--danger); web/app/login/page.tsx (T10 wording + Create
+  Account link); web/app/page.tsx (Next.js scaffold welcome page replaced with a minimal
+  BusBuddy landing page — approved by Sino). No endpoints, no DB changes, no behavior
+  changes: guards, fetches, handlers untouched.
+- How it was tested (2026-09-17/18): after each page refactor its behavior was re-tested —
+  admin: list loads, Verify/Reject/Logout work; driver: status loads in all data states,
+  license file link opens, admin on the page still gets "Access denied"; register:
+  success/error messages show; login: valid login redirects, wrong password errors.
+  Final color audit (regex over web/app + web/components) returns matches in globals.css
+  only. T10 skipped: Forgot Password, back arrow (no corresponding features/endpoints).
+  T11 skipped: License No/Expiry (no DB columns), Re-upload License/Start Driving buttons
+  (no endpoints).
+- Gotchas others must know: Tailwind color classes (text-gray-500, bg-green-600, ...) are
+  banned — use CSS variables, e.g. style={{ color: 'var(--text-muted)' }}. Two variables
+  added: --text-muted (muted grey text) and --bb-link (cyan links on dark backgrounds).
+  The landing page (/) is a client component because Button only supports onClick (no
+  href). audit.txt at the repo root is a throwaway diagnostic file — never commit it.
+## Changes
+- All pages use the shared Button component (admin Verify/Reject/Logout, driver status
+  Log out, landing page buttons).
+- Zero hardcoded colors outside globals.css: Tailwind color classes and inline hexes
+  replaced with CSS variables. Two variables added: --text-muted, --bb-link. Input
+  border now uses var(--grey).
+- /login matches Dana's T10 Sign In mockup: "Welcome Back" / "Sign in to continue to
+  BusBuddy" / "Sign In →" gradient pill button (existing T1 styling), plus a
+  "Don't have an account? Create Account" link to /driver/register.
+  Skipped: Forgot Password, back arrow — no corresponding features/endpoints exist.
+- /driver/status matches Dana's T11 My Status mockups: dark gradient background, two
+  glass cards, per-state display (pending: ⏳ "Under review" amber; verified: ✅
+  "Verification Approved" green; rejected: ❌ "Verification Rejected" red), progress
+  checklist (Profile created, License uploaded, Admin review, Go live), License
+  Information card. Skipped: License No/Expiry (no DB columns), Re-upload/Start Driving
+  (no endpoints).
+- Next.js scaffold welcome page replaced with a minimal BusBuddy landing page
+  (approved by Sino).
+- No behavior changes: guards, fetches, and handlers are unchanged.
+
+## How to test
+1. npm run dev → localhost:3000 → BusBuddy landing page; "Log in" and "Driver
+   registration" buttons navigate.
+2. /login matches the T10 mockup; "Create Account" opens /driver/register; valid login
+   still redirects by role; wrong password still shows an error.
+3. Admin login → /admin/drivers → list loads; Verify/Reject/Logout work.
+4. Driver login → /driver/status → T11-style page; "View license file" opens the file;
+   admin opening /driver/status gets "Access denied".
+5. /driver/register → success message green, error message red.
+6. Color audit over web/app + web/components returns matches in globals.css only.
+
 
 <!-- Append your block below this line after finishing a task. Format:
 
