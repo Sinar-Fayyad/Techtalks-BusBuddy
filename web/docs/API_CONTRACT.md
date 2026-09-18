@@ -36,4 +36,3 @@ Returns the logged-in driver's own profile + registration status.
 Headers: Bearer token
 200: { "driver": { "name", "email", "status", "license_url", "created_at" } }
 Errors: 401 no/invalid token · 403 not a driver · 404 no profile yet · 500
-
