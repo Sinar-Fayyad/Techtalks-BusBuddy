@@ -325,6 +325,26 @@ Screenshots attached (API responses + both UI screens).
 5. /driver/register → success message green, error message red.
 6. Color audit over web/app + web/components returns matches in globals.css only.
 
+## 2026-09-18 — [jad kamal el dine] — T6 — Mobile login
+
+- Added mobile login: LoginScreen (POST /api/auth/login, contract §2, no new endpoints),
+  session persisted via expo-secure-store (keys bb_token/bb_role — same as web T2),
+  HomeScreen with logout, and boot-time session restore so restarts stay logged in.
+  The Sprint 1 registration screen moved to RegisterScreen.js with logic untouched
+  (+ a back-to-login link); App.js is now the session controller (loading/login/register/home).
+- New/changed: mobile/api.js, mobile/LoginScreen.js, mobile/HomeScreen.js,
+  mobile/RegisterScreen.js (new), mobile/App.js (replaced), mobile/package.json
+  (+expo-secure-store). No API or web changes.
+- How it was tested (physical iPhone via Expo Go): login 200 -> home; full app restart ->
+  still logged in; wrong password -> visible 401 error; empty fields -> inline error, no
+  request; web server stopped -> friendly unreachable error, no crash; registration flow
+  re-tested as regression (photo pick + upload + profile) and still works; login/register
+  navigation round-trip clean.
+- Gotchas others must know: BASE_URL in mobile/api.js must be the PC's LAN IPv4
+  (ipconfig), NOT localhost — phones resolve localhost to themselves; the IP changes
+  with Wi-Fi networks. File names are case-sensitive for the mobile bundler
+  (LoginScreen.js, not loginscreen.js). iOS needs Settings -> Expo Go -> Local Network
+  enabled to reach the dev machine.
 
 <!-- Append your block below this line after finishing a task. Format:
 

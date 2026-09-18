@@ -1,106 +1,53 @@
-import { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, ScrollView, Image } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system/legacy';
-
-const API = 'http://192.168.2.116:3000/api';
+import React, { useEffect, useState } from 'react';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
+import LoginScreen from './LoginScreen';
+import RegisterScreen from './RegisterScreen';
+import HomeScreen from './HomeScreen';
 
 export default function App() {
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
-  const [license, setLicense] = useState(null);
-  const [msg, setMsg] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [screen, setScreen] = useState('login'); // 'login' | 'register'
+  const [session, setSession] = useState(null);  // { token, role }
 
-  const set = (k) => (v) => setForm({ ...form, [k]: v });
+  useEffect(() => {
+    (async () => {
+      try {
+        const token = await SecureStore.getItemAsync('bb_token');
+        const role = await SecureStore.getItemAsync('bb_role');
+        if (token) setSession({ token, role });
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
-  const pick = async () => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) return setError('Gallery permission needed');
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
-    if (!result.canceled) setLicense(result.assets[0]);
-  };
+  async function handleLogin(token, role) {
+    await SecureStore.setItemAsync('bb_token', token);
+    await SecureStore.setItemAsync('bb_role', role);
+    setSession({ token, role });
+  }
 
-  const submit = async () => {
-    setError(''); setMsg('');
-    if (!form.name || !form.email || !form.password || !license) {
-      return setError('All fields + license photo required');
-    }
-    setLoading(true);
-    try {
-      const res = await fetch(`${API}/auth/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error ?? 'Signup failed'); return; }
+  async function handleLogout() {
+    await SecureStore.deleteItemAsync('bb_token');
+    await SecureStore.deleteItemAsync('bb_role');
+    setSession(null);
+    setScreen('login');
+  }
 
-      const login = await fetch(`${API}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.email, password: form.password }),
-      });
-      const ld = await login.json();
-      if (!login.ok) { setError(ld.error ?? 'Login failed'); return; }
+  if (loading) {
+    return <View style={s.center}><ActivityIndicator size="large" color="#f59e0b" /></View>;
+  }
 
-      const up = await FileSystem.uploadAsync(`${API}/driver/license`, license.uri, {
-        httpMethod: 'POST',
-        uploadType: FileSystem.FileSystemUploadType.MULTIPART,
-        fieldName: 'file',
-        headers: { Authorization: `Bearer ${ld.token}` },
-      });
-      if (up.status !== 201) { setError('Upload failed: ' + up.body); return; }
-      const ud = JSON.parse(up.body);
+  if (session) {
+    return <HomeScreen role={session.role} onLogout={handleLogout} />;
+  }
 
-      const prof = await fetch(`${API}/driver/profile`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ld.token}` },
-        body: JSON.stringify({ license_url: ud.path }),
-      });
-      const pd = await prof.json();
-      if (!prof.ok) { setError(pd.error ?? 'Profile failed'); return; }
-
-      setMsg('Registered! Pending admin review ✅');
-      setForm({ name: '', email: '', password: '' });
-      setLicense(null);
-    } catch (e) {
-      setError('Error: ' + (e?.message ?? String(e)));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>BusBuddy — Driver Registration</Text>
-      <TextInput style={styles.input} placeholder="Full name" value={form.name} onChangeText={set('name')} />
-      <TextInput style={styles.input} placeholder="Email" value={form.email} onChangeText={set('email')} autoCapitalize="none" keyboardType="email-address" />
-      <TextInput style={styles.input} placeholder="Password" value={form.password} onChangeText={set('password')} secureTextEntry />
-      <TouchableOpacity style={styles.picker} onPress={pick}>
-        <Text style={styles.pickerText}>
-          {license ? '📎 Photo selected' : '📷 Pick license photo'}
-        </Text>
-      </TouchableOpacity>
-      {license && <Image source={{ uri: license.uri }} style={styles.thumb} />}
-      <TouchableOpacity style={styles.button} onPress={submit} disabled={loading}>
-        <Text style={styles.buttonText}>{loading ? 'Registering...' : 'Register'}</Text>
-      </TouchableOpacity>
-      {msg !== '' && <Text style={styles.msg}>{msg}</Text>}
-      {error !== '' && <Text style={styles.error}>{error}</Text>}
-    </ScrollView>
-  );
+  return screen === 'register'
+    ? <RegisterScreen onBack={() => setScreen('login')} />
+    : <LoginScreen onLogin={handleLogin} onGoRegister={() => setScreen('register')} />;
 }
 
-const styles = StyleSheet.create({
-  container: { flexGrow: 1, justifyContent: 'center', padding: 24 },
-  title: { fontSize: 22, fontWeight: 'bold', marginBottom: 20, textAlign: 'center', color: '#1B2A4A' },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 6, padding: 12, marginBottom: 12, fontSize: 15 },
-  picker: { borderWidth: 1, borderColor: '#1B2A4A', borderRadius: 6, padding: 12, marginBottom: 12, alignItems: 'center' },
-  pickerText: { color: '#1B2A4A', fontWeight: '600' },
-  thumb: { width: '100%', height: 150, borderRadius: 6, marginBottom: 12 },
-  button: { backgroundColor: '#1B2A4A', padding: 14, borderRadius: 6, alignItems: 'center' },
-  buttonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
-  msg: { color: '#16a34a', marginTop: 12, textAlign: 'center' },
-  error: { color: '#dc2626', marginTop: 12, textAlign: 'center' },
+const s = StyleSheet.create({
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f172a' },
 });
