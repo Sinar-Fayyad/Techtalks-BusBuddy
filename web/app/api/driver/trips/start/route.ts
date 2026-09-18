@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
 
-
- export async function POST(req: Request) {
+export async function POST(req: Request) {
   try {
     // --- 1. AUTH: same pattern as profile/route.ts ---
     const auth = req.headers.get('authorization');
@@ -16,6 +15,8 @@ import pool from '@/lib/db';
     } catch {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
+
+    // --- ROLE CHECK: only drivers may start trips (contract: 403) ---
     if (payload.role !== 'driver') {
       return NextResponse.json({ error: 'Not a driver' }, { status: 403 });
     }
@@ -55,7 +56,7 @@ import pool from '@/lib/db';
 
       await conn.commit();
 
-      // --- 3. Read the row back so the response is exactly what MySQL stored ---
+      // --- 3. Read the row back so the response matches MySQL exactly ---
       const [rows] = await conn.query(
         'SELECT id, driver_id, CAST(start_time AS CHAR) AS start_time, end_time FROM trips WHERE id = ?',
         [result.insertId]
@@ -74,4 +75,3 @@ import pool from '@/lib/db';
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
-
