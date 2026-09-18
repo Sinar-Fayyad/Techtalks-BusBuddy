@@ -83,6 +83,35 @@ Every teammate MUST append an update block at the end of this file before openin
 6. Empty submit, then email "abc" → inline errors, no network request
 7. Stop dev server → submit → friendly error; restart → works again
 
+## 2026-09-18 — [jad kamal el dine] — T8 — GPS spike: trips table + start/stop API
+
+- Added the trips table (id PK, driver_id FK -> drivers.id ON DELETE RESTRICT,
+  start_time DATETIME(3) UTC, end_time DATETIME(3) NULL = trip active, created_at,
+  index on (driver_id, start_time)) and three endpoints: POST /api/driver/trips/start
+  (driver_id from JWT, verified-only, 409 double-start guard via transaction +
+  FOR UPDATE), POST /api/driver/trips/stop (sets end_time, 404 when none active),
+  GET /api/admin/drivers/[id]/trips (admin-only, newest first, 400/404 handling).
+  API_CONTRACT.md sections 7-9 added (Sino approved).
+- New/changed: web/app/api/driver/trips/start/route.ts, web/app/api/driver/trips/stop/route.ts,
+  web/app/api/admin/drivers/[id]/trips/route.ts (new); web/docs/API_CONTRACT.md;
+  DB: CREATE TABLE trips (SQL sent to Sino for the shared schema). No existing
+  endpoints, components, or teammates' files touched.
+- How it was tested (Apidog + phpMyAdmin): start -> 201, row verified in DB
+  (correct driver_id, start_time matches response string-for-string, end_time NULL);
+  double-start -> 409; stop -> 200, end_time filled and identical in DB, start_time
+  untouched; stop again -> 404; start/stop/start lifecycle repeats (multiple completed
+  rows). Admin list -> 200, all fields match MySQL, newest first; empty driver -> 200
+  {"trips":[]}. Errors: no/garbage token 401; admin token on driver routes 403;
+  driver token on admin route 403; unverified start 403; no profile 404; unknown
+  driver 404; non-numeric id 400.
+- Gotchas others must know: times stored UTC via UTC_TIMESTAMP(3), returned as
+  strings (CAST AS CHAR) so API responses match phpMyAdmin exactly — format on the
+  client. Stop has no verified-check on purpose (driver must end an in-progress trip).
+  users table needs the password_hash column (ALTER TABLE users CHANGE password
+  password_hash VARCHAR(255) NOT NULL) or signup/login break — same open issue Tamara
+  noted. VS Code "compact folders" display nested API folders misleadingly
+  (trips/start/start looked like trips/start) — disabled the setting; a 404-HTML from
+  a route you just wrote usually means wrong folder depth.
 
 <!-- Append your block below this line after finishing a task. Format:
 
