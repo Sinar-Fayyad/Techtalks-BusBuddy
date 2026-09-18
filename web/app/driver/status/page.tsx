@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../auth-context';
+import Button from '@/components/Button';
 
 interface DriverInfo {
   name: string;
@@ -52,14 +53,14 @@ export default function DriverStatusPage() {
     return (
       <main className="p-8">
         <h1 className="text-2xl font-bold">Access denied</h1>
-        <p className="mt-2 text-gray-600">This page is for drivers only.</p>
-        <button className="bg-gray-700 text-white p-2 rounded mt-4" onClick={logout}>Log out</button>
+        <p className="mt-2" style={{ color: 'var(--text-muted)' }}>This page is for drivers only.</p>
+        <Button color="primary" onClick={logout}>Log out</Button>
       </main>
     );
   }
 
   if (!ready || !token) {
-    return <main className="p-8"><p className="text-gray-500">Checking session…</p></main>;
+    return <main className="p-8"><p style={{ color: 'var(--text-muted)' }}>Checking session…</p></main>;
   }
 
   const licenseName = driver?.license_url?.split('/').pop() ?? '';
@@ -68,22 +69,22 @@ export default function DriverStatusPage() {
     <main className="p-8 max-w-xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">My Status</h1>
       {error && <p style={{ color: 'var(--danger)' }}>{error}</p>}
-      {!driver && !error && <p className="text-gray-500">Loading…</p>}
+      {!driver && !error && <p style={{ color: 'var(--text-muted)' }}>Loading…</p>}
 
       {driver && (
         <div className="border rounded-lg p-6">
-          <p className="text-gray-600">Driver</p>
+          <p style={{ color: 'var(--text-muted)' }}>Driver</p>
           <p className="text-xl font-semibold">{driver.name}</p>
-          <p className="text-gray-500 mb-4">{driver.email}</p>
+          <p className="mb-4" style={{ color: 'var(--text-muted)' }}>{driver.email}</p>
 
-          <p className="text-gray-600">Registration status</p>
+          <p style={{ color: 'var(--text-muted)' }}>Registration status</p>
           <p className="text-lg font-bold mb-4" style={{ color: statusColors[driver.status] ?? 'var(--grey)' }}>
             {driver.status.toUpperCase()}
           </p>
 
-          <p className="text-gray-600">License</p>
+          <p style={{ color: 'var(--text-muted)' }}>License</p>
           <p>{licenseName}</p>
-          <p className="text-gray-500 text-sm mb-2">Submitted: {new Date(driver.created_at).toLocaleDateString()}</p>
+          <p className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>Submitted: {new Date(driver.created_at).toLocaleDateString()}</p>
           <a className="underline" style={{ color: 'var(--navy)' }} target="_blank"
              href={`http://localhost:3000/api/driver/license/${licenseName}?token=${encodeURIComponent(token!)}`}>
             View license file
