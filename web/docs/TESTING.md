@@ -62,7 +62,13 @@ Rules:
 | W11 | /driver/status shows own data only | own status, others' impossible (no URL id) | ✅ |
 | W12 | Status updates live (pending → verified) | refresh shows VERIFIED | ✅ |
 | W13 | Trips: start → 201, double-start → 409, stop → 200, stop again → 404 | as listed | ✅ |
-| W14 | Admin GET driver trips | correct rows, newest first | ✅ |
+| W14 | Admin GET driver trips | correct rows, newest first | ✅ |### Sprint 3 — test-method changes (web cleanup PR, 2026-09-XX)
+
+- W6/W8: license opens via "View license file" button / "license" link
+  (Bearer + blob viewer, web/lib/view-license.ts). Expected unchanged: file displays.
+- W7: UI no longer exposes other drivers' file URLs. Run as DRIVER via DevTools console:
+  fetch('/api/driver/license/<OTHER_FILE>', { headers: { Authorization: 'Bearer ' + localStorage.getItem('bb_token') } }).then(r => r.status) → 403
+- W9: file URL with no token → 401. Legacy ?token=... URLs also return 401 (hardened).
 
 ### Mobile (M)
 
@@ -89,13 +95,13 @@ Rules:
 ## Quick checks still pending ⬜
 
 - /login empty fields → inline error, no network call (DevTools)
-- Server stopped → friendly error on login/register
+- ✅ Server stopped → friendly error on login/register (verified during web-cleanup task)
 - License upload validation: wrong type → 400, >5MB → 400
 
 ## Known issues → Sprint 3
 
-- License preview not inline in /admin/drivers (link only)
-- No logout/back button on /driver/status
-- Login/signup/landing don't match final mockups; no shared Error component
+- License preview not inline in /admin/drivers (link only) — STILL OPEN
+- ~~No logout/back button on /driver/status~~ — done (web cleanup PR)
+- ~~No shared Error component~~ — done (ErrorMessage on login/register/status/admin; other pages adopt as they're finished)
 - Mobile: no shared Button/Input components; no driver status screen
-- ?token= in URLs can leak into history/logs (hardening)
+- ~~?token= in URLs can leak into history/logs~~ — done (Bearer-only, contract v3)
