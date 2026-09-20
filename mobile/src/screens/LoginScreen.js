@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
-import { loginRequest } from './api';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { loginRequest } from '../../api';
+import Button from '../components/Button';
+import Input from '../components/Input';
 
 export default function LoginScreen({ onLogin, onGoRegister }) {
   const [email, setEmail] = useState('');
@@ -36,16 +38,15 @@ export default function LoginScreen({ onLogin, onGoRegister }) {
       <Text style={s.title}>BusBuddy</Text>
       <Text style={s.subtitle}>Driver login</Text>
 
-      <TextInput
+      <Input
         style={s.input}
         placeholder="Email"
         placeholderTextColor="#999"
-        autoCapitalize="none"
         keyboardType="email-address"
         value={email}
         onChangeText={setEmail}
       />
-      <TextInput
+      <Input
         style={s.input}
         placeholder="Password"
         placeholderTextColor="#999"
@@ -56,11 +57,13 @@ export default function LoginScreen({ onLogin, onGoRegister }) {
 
       {error !== '' && <Text style={s.error}>{error}</Text>}
 
-      <TouchableOpacity style={s.button} onPress={handleLogin} disabled={loading}>
-        {loading
-          ? <ActivityIndicator color="#fff" />
-          : <Text style={s.buttonText}>Log in</Text>}
-      </TouchableOpacity>
+      <Button
+        label="Log in"
+        onPress={handleLogin}
+        loading={loading}
+        style={s.button}
+        textStyle={s.buttonText}
+      />
 
       <TouchableOpacity onPress={onGoRegister}>
         <Text style={s.registerLink}>New driver? Create an account</Text>
