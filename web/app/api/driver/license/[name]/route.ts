@@ -4,14 +4,22 @@ import { readFile } from 'fs/promises';
 import path from 'path';
 import pool from '@/lib/db';
 
+const MIME: Record<string, string> = {
+  '.pdf': 'application/pdf',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+};
+
 export async function GET(req: Request, { params }: { params: Promise<{ name: string }> }) {
   try {
     const auth = req.headers.get('authorization') ?? '';
-    const qsToken = new URL(req.url).searchParams.get('token') ?? '';
-    const tokenValue = auth.startsWith('Bearer ') ? auth.split(' ')[1] : qsToken;
+    if (!auth.startsWith('Bearer ') || !auth.slice(7)) {
+      return NextResponse.json({ error: 'No token' }, { status: 401 });
+    }
     let payload: any;
     try {
-      payload = jwt.verify(tokenValue, process.env.JWT_SECRET!);
+      payload = jwt.verify(auth.slice(7), process.env.JWT_SECRET!);
     } catch {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
@@ -40,7 +48,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ name: st
 
     const filePath = path.join(process.cwd(), 'uploads', name);
     const data = await readFile(filePath);
-    return new NextResponse(new Uint8Array(data));
+    const type = MIME[path.extname(name).toLowerCase()] ?? 'application/octet-stream';
+    return new NextResponse(new Uint8Array(data), {
+      headers: { 'Content-Type': type },
+    });
   } catch {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }

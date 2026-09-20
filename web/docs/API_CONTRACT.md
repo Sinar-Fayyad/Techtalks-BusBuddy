@@ -33,11 +33,6 @@ The caller's own profile (JOIN users+drivers by token userId — no URL id).
 Multipart form-data, field "file". PDF/JPG/PNG only, max 5MB. Stores in web/uploads/.
 201: `{ path: "/uploads/<name>" }` · 400 no file / bad type / too big · 401 · 500
 
-8. GET /driver/license/{name} 🔒 token required (Bearer header OR ?token=)
-Permission: admin = any file · driver = ONLY the file in their own drivers.license_url.
-200: file bytes · 400 bad name (path traversal) · 401 · 403 · 404 not found
-⚠️ Known caveat: ?token= URLs can leak into browser history — Bearer preferred.
-
 9. POST /driver/trips/start 🔒 verified driver
 Starts a trip. Times stored/returned UTC.
 201: trip { id, driver_id, start_time, end_time: null } · 401 · 403 unverified/not driver · 404 no profile · 409 trip already active
@@ -51,3 +46,10 @@ All trips of one driver, newest first.
 200: { trips: [{ id, driver_id, start_time, end_time, created_at }] } · 400 non-numeric id · 401 · 403 · 404 unknown driver
 
 Planned: refresh tokens, driver profile edit (PATCH /driver/me), live GPS pings.
+
+## BusBuddy API Contract — v3 (21/09)
+
+8. GET /driver/license/{name} 🔒 token required (Bearer header ONLY)
+Permission: admin = any file · driver = ONLY the file in their own drivers.license_url.
+200: file bytes (correct Content-Type) · 400 bad name (path traversal) · 401 missing/invalid token · 403 · 404 not found
+Changed v3: ?token= query auth removed (URLs leak via history/logs). Viewers: fetch with Bearer → open via blob URL (web/lib/view-license.ts).
