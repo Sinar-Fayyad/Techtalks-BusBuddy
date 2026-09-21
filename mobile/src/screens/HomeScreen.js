@@ -1,14 +1,13 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import Button from '../components/Button';
 
 export default function HomeScreen({ role, onLogout }) {
   return (
     <View style={s.container}>
       <Text style={s.title}>BusBuddy</Text>
       <Text style={s.msg}>✅ Logged in{role ? ` as ${role}` : ''}.</Text>
-      <TouchableOpacity style={s.btn} onPress={onLogout}>
-        <Text style={s.btnText}>Log out</Text>
-      </TouchableOpacity>
+      <Button label="Log out" onPress={onLogout} style={s.btn} textStyle={s.btnText} />
     </View>
   );
 }

@@ -51,6 +51,27 @@
 
 ---
 
+## 21/09 — Sinar — DB migration: roles + relationships + trip location
+
+- What was done: users.role ENUM extended with 'student','parent' (appended, safe for existing rows). trips gained nullable latitude/longitude DECIMAL(9,6) + location_updated_at DATETIME(3). New InnoDB link tables parent_student and trip_students with composite PKs (= unique pair) and FK ON DELETE CASCADE to users/trips.
+- New/changed: DB only — database/schema.sql (updated CREATE TABLEs for users/trips + 2 new tables + change-log entry). No endpoints, no app code. Teammates upgrade by running the change-log block.
+- Tested: signup/login still work in UI; existing rows unchanged (location = NULL). Success: insert parent→student link, insert trip_student, new roles accepted. Errors: duplicate pair → 1062, non-existent student → 1452, delete user → CASCADE removed link rows.
+- Gotchas: FK columns must match users.id/trips.id types exactly; never reorder ENUM values (internal numeric mapping); composite PK already enforces the unique pair; FKs guarantee row existence, NOT role correctness (parent-vs-student checks belong in a future API task). Migration runs once — ADD COLUMN fails if repeated.
+
+## 21/09 — Sinar — Web cleanup: Error component, logout, token hardening
+
+- What was done: shared ErrorMessage component (friendly box, role=alert, renders null when empty) adopted on /login, /driver/register, /driver/status, /admin/drivers; catches now do console.error + friendly message per convention. Logout button added on /driver/status (outside the data block, works with no driver profile). License GET hardened to Bearer-header ONLY — ?token= fallback removed, missing token = 401; response now sends correct Content-Type. New web/lib/view-license.ts: fetch with Bearer → blob → objectURL in a pre-opened tab (popup-blocker safe), revoked after 60s.
+- New/changed: NEW web/components/ErrorMessage/ (index.tsx + module.css), web/lib/view-license.ts. CHANGED api/driver/license/[name]/route.ts, app/driver/status/page.tsx, app/admin/drivers/page.tsx, app/login/page.tsx, app/driver/register/page.tsx, docs/API_CONTRACT.md (v3: entry 8 Bearer-only), docs/TESTING.md (W6–W9 methods updated, 1 quick-check ticked, 3 known issues resolved).
+- Tested: admin views any license (displays), driver views own file (displays), driver views other's file → 403 (DevTools fetch), no token → 401, legacy ?token= URL → 401, global search ?token= = 0 hits. Server-off forced failure → friendly box + console.error on login/register. W1–W14 regression: all pass.
+- Gotchas: license GET must send Content-Type or blobs open as downloads; window.open must run synchronously inside the click or popup blockers kill it; ?token= links die by design (401) — anyone with old saved URLs sees 401; register pages still being built keep inline errors — adopt ErrorMessage when their tasks finish.
+
+## 21/09 — Sinar — Mobile cleanup: src/ structure + shared components
+
+- What was done: restructured Expo app — App.js → src/App.js, screens → src/screens/ (Login/Home/Register), index.js entry repointed to './src/App' (package.json "main": "index.js" unchanged). New shared src/components/Button.js (label/onPress/loading/disabled/style/textStyle, built-in ActivityIndicator, disabled=disabled||loading) and Input.js (controlled TextInput, neutral layout-only base). Both adopted in all three screens with existing styles passed in — visuals unchanged. api.js deliberately left at root; BASE_URL and secure-store keys untouched.
+- New/changed: NEW mobile/src/components/Button.js, Input.js. MOVED src/App.js, src/screens/{LoginScreen,HomeScreen,RegisterScreen}.js. CHANGED mobile/index.js (1 line). Imports updated (./api → ../../api). No endpoint/DB changes.
+- Tested: npx expo start -c boots cleanly from new structure (after each stage). M1–M6 all pass: phone login, session survives restart, wrong-password error, phone register E2E, create-account link, full register→verify→login loop. Screens visually identical to before.
+- Gotchas: index.js import must point at src/App or the app white-screens; always restart with expo start -c after moving files (Metro cache); shared Input defaults autoCapitalize='none' — plain-text fields (Full name) need explicit autoCapitalize="sentences" to preserve RN default; RegisterScreen keeps "Registering..." text via conditional label + disabled, NOT the loading prop (spinner would be a behavior change); delete old root copies of moved files or Metro may resolve stale ones.
+
 ## ⬇️ RAW ZONE — append your block below this line, don't touch anything above
 
 Format (the end-of-task prompt already generates this — just paste it):

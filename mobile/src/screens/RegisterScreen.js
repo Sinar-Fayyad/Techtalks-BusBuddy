@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
-import { BASE_URL } from './api';
+import { BASE_URL } from '../../api';
+import Button from '../components/Button';
+import Input from '../components/Input';
 
 export default function RegisterScreen({ onBack }) {
   const [form, setForm] = useState({ name: '', email: '', password: '' });
@@ -73,18 +75,22 @@ export default function RegisterScreen({ onBack }) {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>BusBuddy — Driver Registration</Text>
-      <TextInput style={styles.input} placeholder="Full name" value={form.name} onChangeText={set('name')} />
-      <TextInput style={styles.input} placeholder="Email" value={form.email} onChangeText={set('email')} autoCapitalize="none" keyboardType="email-address" />
-      <TextInput style={styles.input} placeholder="Password" value={form.password} onChangeText={set('password')} secureTextEntry />
+      <Input style={styles.input} placeholder="Full name" value={form.name} onChangeText={set('name')} autoCapitalize="sentences" />
+      <Input style={styles.input} placeholder="Email" value={form.email} onChangeText={set('email')} autoCapitalize="none" keyboardType="email-address" />
+      <Input style={styles.input} placeholder="Password" value={form.password} onChangeText={set('password')} secureTextEntry autoCapitalize="none" />
       <TouchableOpacity style={styles.picker} onPress={pick}>
         <Text style={styles.pickerText}>
           {license ? '📎 Photo selected' : '📷 Pick license photo'}
         </Text>
       </TouchableOpacity>
       {license && <Image source={{ uri: license.uri }} style={styles.thumb} />}
-      <TouchableOpacity style={styles.button} onPress={submit} disabled={loading}>
-        <Text style={styles.buttonText}>{loading ? 'Registering...' : 'Register'}</Text>
-      </TouchableOpacity>
+      <Button
+        label={loading ? 'Registering...' : 'Register'}
+        onPress={submit}
+        disabled={loading}
+        style={styles.button}
+        textStyle={styles.buttonText}
+      />
       {msg !== '' && <Text style={styles.msg}>{msg}</Text>}
       {error !== '' && <Text style={styles.error}>{error}</Text>}
       <TouchableOpacity onPress={onBack}>
