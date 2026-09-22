@@ -165,6 +165,12 @@ export default function DriverStatusPage() {
                 ))}
               </div>
             </section>
+            {driver.status === 'verified' && (
+  <p style={{ textAlign: 'center', marginTop: '1rem' }}>
+    <a href="/driver/home" style={{ color: 'var(--bb-link)', fontWeight: 600 }}>Trip controls →</a>
+  </p>
+)}
+
 
             <section style={{
               background: 'var(--bb-card-bg)',

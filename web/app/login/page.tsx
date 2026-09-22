@@ -66,7 +66,7 @@ const submit = async (e: FormEvent<HTMLFormElement>) => {
     setMsg(`Login successful as ${data.role}. ✅`);
 
     if (data.role === 'admin') {
-      router.push('/admin/drivers');
+      router.push('/admin/home');
     } else if (data.role === 'driver') {
       router.push('/driver/status');
     }
