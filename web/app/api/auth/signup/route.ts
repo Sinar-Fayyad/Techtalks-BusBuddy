@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import pool from '@/lib/db';
 
+const VALID_ROLES = ['admin', 'driver', 'student', 'parent'];
+
 export async function POST(req: Request) {
   try {
     const { name, email, password, role } = await req.json();
@@ -18,13 +20,12 @@ export async function POST(req: Request) {
     const hash = await bcrypt.hash(password, 10);
     const [result]: any = await pool.query(
       'INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)',
-      [name, email, hash, role === 'admin' ? 'admin' : 'driver']
+      [name, email, hash, VALID_ROLES.includes(role) ? role : 'driver']
     );
 
     return NextResponse.json({ message: 'User created', userId: result.insertId }, { status: 201 });
-    } catch (err) {
+  } catch (err) {
     console.error('SIGNUP ERROR:', err);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
-
 }
