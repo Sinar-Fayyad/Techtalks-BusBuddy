@@ -53,3 +53,19 @@ Planned: refresh tokens, driver profile edit (PATCH /driver/me), live GPS pings.
 Permission: admin = any file · driver = ONLY the file in their own drivers.license_url.
 200: file bytes (correct Content-Type) · 400 bad name (path traversal) · 401 missing/invalid token · 403 · 404 not found
 Changed v3: ?token= query auth removed (URLs leak via history/logs). Viewers: fetch with Bearer → open via blob URL (web/lib/view-license.ts).
+
+## BusBuddy API Contract — v4 ([date]) — T8 parent/student roles
+
+Changed v4: entry 1 signup now accepts role "student" | "parent" (unknown/omitted roles still default to driver). Token payload roles: "admin" | "driver" | "student" | "parent".
+
+12. POST /parents/me/children 🔒 parent only
+Links the logged-in parent to a child (self-link only — no body parent id).
+Headers: Bearer token
+Body: { "studentId": number }
+201: { "message": "Child linked" }
+Errors: 400 invalid studentId · 401 no/invalid token · 403 not a parent / target user is not a student · 404 student not found · 409 link already exists · 500
+DB: parent_student (composite PK parent_user_id+student_user_id — duplicate = 1062, surfaced as 409).
+
+Planned (designed, NOT yet implemented — do not call):
+13. POST /trips/{tripId}/students 🔒 admin — assign a student to a trip. Body { "studentId" } · 201 · 401/403/404/409.
+14. GET /students/{studentId}/trip-status 🔒 student (own) / parent (linked child) / admin (any) — 200 { studentId, trip: {...} | null } · 401/403/404.
