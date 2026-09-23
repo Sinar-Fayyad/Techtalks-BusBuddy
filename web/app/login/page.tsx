@@ -4,7 +4,7 @@ import { useState, type ChangeEvent, type FormEvent } from 'react';
 import styles from './page.module.css';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../auth-context';
-
+import ErrorMessage from '@/components/ErrorMessage'; // NEW — shared friendly error
 
 export default function LoginPage() {
   const [form, setForm] = useState({ email: '', password: '' });
@@ -72,7 +72,8 @@ const submit = async (e: FormEvent<HTMLFormElement>) => {
     }
 
 
-  } catch {
+  } catch (err) { // CHANGED — add err param
+    console.error('Login failed:', err); // CHANGED — console.error per convention
     setError('Server error — is the dev server running?');
   } finally {
     setLoading(false);
@@ -115,9 +116,9 @@ const submit = async (e: FormEvent<HTMLFormElement>) => {
         </form>
 
         {msg && <p className={styles.success}>{msg}</p>}
-        {error && <p className={styles.error}>{error}</p>}
+        <ErrorMessage message={error} /> {/* CHANGED — was: {error && <p className={styles.error}>{error}</p>} */}
                 <p style={{ color: 'var(--bb-text-dim)', textAlign: 'center', marginTop: '16px', fontSize: '14px' }}>
-          Don't have an account?{' '}
+          Don't have an account?{''}
           <a href="/driver/register" style={{ color: 'var(--bb-link)', fontWeight: 600, textDecoration: 'none' }}>
             Create Account
           </a>

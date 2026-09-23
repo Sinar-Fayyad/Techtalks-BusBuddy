@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# private uploads (driver licenses - never in git!)
+uploads/
+
+# throwaway diagnostics
+audit.txt

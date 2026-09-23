@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
+import { BASE_URL } from '../../api';
+import Button from '../components/Button';
+import Input from '../components/Input';
 
-const API = 'http://192.168.2.116:3000/api';
-
-export default function App() {
+export default function RegisterScreen({ onBack }) {
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [license, setLicense] = useState(null);
   const [msg, setMsg] = useState('');
@@ -28,7 +29,7 @@ export default function App() {
     }
     setLoading(true);
     try {
-      const res = await fetch(`${API}/auth/signup`, {
+      const res = await fetch(`${BASE_URL}/api/auth/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
@@ -36,7 +37,7 @@ export default function App() {
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? 'Signup failed'); return; }
 
-      const login = await fetch(`${API}/auth/login`, {
+      const login = await fetch(`${BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: form.email, password: form.password }),
@@ -44,7 +45,7 @@ export default function App() {
       const ld = await login.json();
       if (!login.ok) { setError(ld.error ?? 'Login failed'); return; }
 
-      const up = await FileSystem.uploadAsync(`${API}/driver/license`, license.uri, {
+      const up = await FileSystem.uploadAsync(`${BASE_URL}/api/driver/license`, license.uri, {
         httpMethod: 'POST',
         uploadType: FileSystem.FileSystemUploadType.MULTIPART,
         fieldName: 'file',
@@ -53,7 +54,7 @@ export default function App() {
       if (up.status !== 201) { setError('Upload failed: ' + up.body); return; }
       const ud = JSON.parse(up.body);
 
-      const prof = await fetch(`${API}/driver/profile`, {
+      const prof = await fetch(`${BASE_URL}/api/driver/profile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ld.token}` },
         body: JSON.stringify({ license_url: ud.path }),
@@ -74,20 +75,27 @@ export default function App() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>BusBuddy — Driver Registration</Text>
-      <TextInput style={styles.input} placeholder="Full name" value={form.name} onChangeText={set('name')} />
-      <TextInput style={styles.input} placeholder="Email" value={form.email} onChangeText={set('email')} autoCapitalize="none" keyboardType="email-address" />
-      <TextInput style={styles.input} placeholder="Password" value={form.password} onChangeText={set('password')} secureTextEntry />
+      <Input style={styles.input} placeholder="Full name" value={form.name} onChangeText={set('name')} autoCapitalize="sentences" />
+      <Input style={styles.input} placeholder="Email" value={form.email} onChangeText={set('email')} autoCapitalize="none" keyboardType="email-address" />
+      <Input style={styles.input} placeholder="Password" value={form.password} onChangeText={set('password')} secureTextEntry autoCapitalize="none" />
       <TouchableOpacity style={styles.picker} onPress={pick}>
         <Text style={styles.pickerText}>
           {license ? '📎 Photo selected' : '📷 Pick license photo'}
         </Text>
       </TouchableOpacity>
       {license && <Image source={{ uri: license.uri }} style={styles.thumb} />}
-      <TouchableOpacity style={styles.button} onPress={submit} disabled={loading}>
-        <Text style={styles.buttonText}>{loading ? 'Registering...' : 'Register'}</Text>
-      </TouchableOpacity>
+      <Button
+        label={loading ? 'Registering...' : 'Register'}
+        onPress={submit}
+        disabled={loading}
+        style={styles.button}
+        textStyle={styles.buttonText}
+      />
       {msg !== '' && <Text style={styles.msg}>{msg}</Text>}
       {error !== '' && <Text style={styles.error}>{error}</Text>}
+      <TouchableOpacity onPress={onBack}>
+        <Text style={styles.backLink}>← Back to login</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -103,4 +111,5 @@ const styles = StyleSheet.create({
   buttonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
   msg: { color: '#16a34a', marginTop: 12, textAlign: 'center' },
   error: { color: '#dc2626', marginTop: 12, textAlign: 'center' },
+  backLink: { color: '#1B2A4A', marginTop: 20, textAlign: 'center' },
 });

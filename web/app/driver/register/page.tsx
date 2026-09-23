@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
+import ErrorMessage from '@/components/ErrorMessage'; // NEW — shared friendly error
 
 export default function DriverRegister() {
   const [form, setForm] = useState({
@@ -75,7 +76,8 @@ export default function DriverRegister() {
 
       setMsg('Registered! Your profile is pending admin review ✅');
       setForm({ name: '', email: '', password: '', license_file: null });
-    } catch {
+    } catch (err) { // CHANGED — add err param
+      console.error('Registration failed:', err); // CHANGED — console.error per convention
       setError('Server error — is the dev server running?');
     } finally {
       setLoading(false);
@@ -95,8 +97,9 @@ export default function DriverRegister() {
         </Button>
       </form>
       {msg && <p className="mt-4" style={{ color: 'var(--success)' }}>{msg}</p>}
-{error && <p className="mt-4" style={{ color: 'var(--danger)' }}>{error}</p>}
+      <div className="mt-4"><ErrorMessage message={error} /></div> {/* CHANGED — was: {error && <p className="mt-4" style={{ color: 'var(--danger)' }}>{error}</p>} */}
 
     </main>
   );
+
 }

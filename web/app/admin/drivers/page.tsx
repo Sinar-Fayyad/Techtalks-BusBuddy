@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../auth-context';
 import Button from '@/components/Button';
+import ErrorMessage from '@/components/ErrorMessage'; // NEW — shared friendly error
+import { viewLicense } from '@/lib/view-license'; // NEW — header-only license viewer
 
 export default function AdminDriversPage() {
   const router = useRouter();
@@ -47,8 +49,14 @@ export default function AdminDriversPage() {
     load(token!); // token is guaranteed here: buttons only render for logged-in admins
   };
 
-  const licenseHref = (path: string) =>
-    `http://localhost:3000/api/driver/license/${path.split('/').pop()}?token=${encodeURIComponent(token!)}`;
+  const openLicense = async (path: string) => {
+    setError('');
+    try {
+      await viewLicense(token!, path.split('/').pop()!);
+    } catch (err: any) {
+      setError(err?.message ?? 'Could not open the license file.');
+    }
+  };
 
   // Driver (or unknown role) token on this page -> blocked, no data, no API call
   if (ready && token && role !== 'admin') {
@@ -57,6 +65,8 @@ export default function AdminDriversPage() {
         <h1 className="text-2xl font-bold">Access denied</h1>
         <p className="mt-2" style={{ color: 'var(--text-muted)' }}>This page is for admins only.</p>
         <Button color="primary" onClick={logout}>Log out</Button>
+
+
       </main>
     );
   }
@@ -72,14 +82,21 @@ export default function AdminDriversPage() {
         <h1 className="text-2xl font-bold">Pending Drivers</h1>
         <Button color="primary" onClick={logout}>Logout</Button>
       </div>
-      {error && <p className="mt-2" style={{ color: 'var(--danger)' }}>{error}</p>}
+      {/* CHANGED — was: {error && <p className="mt-2" style={{ color: 'var(--danger)' }}>{error}</p>} */}
+      <ErrorMessage message={error} />
       {drivers.length === 0 && !error && <p className="mt-4" style={{ color: 'var(--text-muted)' }}>No pending drivers 🎉</p>}
       <ul className="mt-4 space-y-2">
         {drivers.map((d) => (
           <li key={d.id} className="border p-3 flex justify-between items-center">
             <span>
               {d.name} — {d.email} —{' '}
-              <a className="underline" style={{ color: 'var(--navy)' }} href={licenseHref(d.license_url)} target="_blank">
+              {/* CHANGED — was: <a href={licenseHref(d.license_url)} target="_blank">license</a> */}
+              <a
+                className="underline"
+                style={{ color: 'var(--navy)', cursor: 'pointer' }}
+                href="#"
+                onClick={(e) => { e.preventDefault(); openLicense(d.license_url); }}
+              >
                 license
               </a>
             </span>

@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../auth-context';
 import Button from '@/components/Button';
+import ErrorMessage from '@/components/ErrorMessage'; // NEW — shared friendly error
+import { viewLicense } from '@/lib/view-license'; // NEW — header-only license viewer
 
 interface DriverInfo {
   name: string;
@@ -45,6 +47,7 @@ export default function DriverStatusPage() {
   const { token, role, ready, logout } = useAuth();
   const [driver, setDriver] = useState<DriverInfo | null>(null);
   const [error, setError] = useState('');
+  const [licenseError, setLicenseError] = useState(''); // NEW — separate so a license problem never wipes the status UI
 
   useEffect(() => {
     if (ready && !token) router.replace('/login');
@@ -88,6 +91,20 @@ export default function DriverStatusPage() {
   const meta = driver ? statusMeta[driver.status] : null;
   const licenseName = driver?.license_url?.split('/').pop() ?? '';
 
+  // NEW — opens the license via Bearer header + blob (token never goes in a URL)
+  const openLicense = async () => {
+    setLicenseError('');
+    if (!licenseName) {
+      setLicenseError('No license file uploaded yet.');
+      return;
+    }
+    try {
+      await viewLicense(token!, licenseName);
+    } catch (err: any) {
+      setLicenseError(err?.message ?? 'Could not open the license file.');
+    }
+  };
+
   const checklist: ChecklistItem[] = [
     { label: 'Profile created', done: true },
     { label: 'License uploaded', done: true },
@@ -107,11 +124,18 @@ export default function DriverStatusPage() {
       padding: '2rem 1rem',
     }}>
       <div style={{ maxWidth: 480, margin: '0 auto' }}>
+        {/* NEW — logout lives outside the data section, so it works even with no driver profile */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+          <Button color="primary" onClick={logout}>Logout</Button>
+        </div>
+
         <h1 style={{ textAlign: 'center', fontSize: '2rem', fontWeight: 700, marginBottom: '1.5rem' }}>
           My <span style={{ color: 'var(--bb-link)' }}>Status</span>
         </h1>
 
-        {error && <p style={{ color: 'var(--bb-error)', textAlign: 'center' }}>{error}</p>}
+        {/* CHANGED — was: {error && <p style={{ color: 'var(--bb-error)', ... }}>{error}</p>} */}
+        <ErrorMessage message={error} />
+        <ErrorMessage message={licenseError} />
         {!driver && !error && <p style={{ color: 'var(--bb-text-dim)', textAlign: 'center' }}>Loading…</p>}
 
         {driver && meta && (
@@ -155,13 +179,13 @@ export default function DriverStatusPage() {
               <p style={{ margin: '0 0 0.5rem 0' }}>{new Date(driver.created_at).toLocaleDateString()}</p>
               <p style={{ color: 'var(--bb-text-dim)', margin: 0 }}>License file</p>
               <p style={{ margin: '0 0 0.75rem 0' }}>{licenseName}</p>
-              <a
-                href={`http://localhost:3000/api/driver/license/${licenseName}?token=${encodeURIComponent(token!)}`}
-                target="_blank"
-                style={{ color: 'var(--bb-link)', fontWeight: 600, textDecoration: 'none' }}
+              <button
+                type="button"
+                onClick={openLicense}
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--bb-link)', fontWeight: 600, fontSize: '1rem' }}
               >
                 View license file
-              </a>
+              </button>
             </section>
           </>
         )}
