@@ -53,3 +53,34 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+// GET /api/parents/me/children   (API_CONTRACT entry 15)
+// The logged-in parent's linked children (students only).
+export async function GET(req: Request) {
+  try {
+    const auth = req.headers.get('authorization');
+    if (!auth?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'No token' }, { status: 401 });
+    }
+    let payload: any;
+    try {
+      payload = jwt.verify(auth.split(' ')[1], process.env.JWT_SECRET!);
+    } catch {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+    if (payload.role !== 'parent') {
+      return NextResponse.json({ error: 'Not a parent' }, { status: 403 });
+    }
+    const [rows] = await pool.query(
+      `SELECT u.id, u.name, u.email
+       FROM parent_student ps
+       JOIN users u ON u.id = ps.student_user_id
+       WHERE ps.parent_user_id = ? AND u.role = 'student'
+       ORDER BY u.name ASC`,
+      [payload.userId]
+    );
+    return NextResponse.json({ children: rows }, { status: 200 });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
