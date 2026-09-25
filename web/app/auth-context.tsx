@@ -2,7 +2,9 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
-type Role = 'admin' | 'driver';
+// T13 dry-run fix: student/parent were restored as null after a refresh
+// (silent "Access denied" on /student/home) — all four roles now round-trip.
+type Role = 'admin' | 'driver' | 'student' | 'parent';
 
 interface AuthState {
   token: string | null;
@@ -24,7 +26,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const savedToken = localStorage.getItem('bb_token');
     const savedRole = localStorage.getItem('bb_role');
     if (savedToken) setToken(savedToken);
-    if (savedRole === 'admin' || savedRole === 'driver') setRole(savedRole);
+    if (savedRole === 'admin' || savedRole === 'driver' || savedRole === 'student' || savedRole === 'parent') {
+      setRole(savedRole);
+    }
     setReady(true);
   }, []);
 
