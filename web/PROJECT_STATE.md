@@ -88,6 +88,59 @@
 - Tested (T1–T11, all pass): verified driver lands on /driver/home; start flips to Stop + "Trip in progress" (trips row created, end_time NULL, verified in DB); trip visible in admin trips list; two-tab double-start → friendly 409 + flip; stop sets end_time (DB verified); stale-tab stop → friendly 404 + flip back; pending and rejected drivers see no buttons; server-off → friendly error + console.error; regression on login/status/license/admin list clean.
 - Gotchas for others: 409/404 handlers repair UI state (setOnTrip) instead of only showing text — no "GET my active trip" endpoint exists, so the button flip on 409/404 is how the client resyncs; a future GET-active-trip endpoint would remove this (contract candidate, not invented here). Register→admin-verify→home loop used to create test drivers; keep test credentials noted (bcrypt hashes can't be recovered).
 
+## 2026-09-24 — Tamara — T10 — Parent trip status page
+
+- What was added: parent page at /parent/home that shows the linked child's trip status (active / ended / no-trip) and a "No child linked" empty state. Added a new "list my children" endpoint so the page can find the child's id. The T10 branch was rebuilt from scratch (its earlier changes had been discarded), which included re-creating the shared trip-status endpoint file.
+
+- New/changed: NEW web/app/api/students/[studentId]/trip-status/route.ts (re-created on this branch) · CHANGED web/app/api/parents/me/children/route.ts (added GET handler) · NEW web/app/parent/home/page.tsx · CHANGED web/app/login/page.tsx (parent → /parent/home) · CHANGED web/docs/API_CONTRACT.md (entry 14 → live; new entry 15). No DB change.
+
+- How it was tested:
+  - GET /parents/me/children: 200 with linked child · 401 no token · 403 driver.
+  - GET /students/2/trip-status as parent: 200 (linked child) · 403 for an unlinked child.
+  - Page in browser: active trip, ended trip (via `UPDATE trips SET end_time`), no-trip (deleted the trip_students row), and "No child linked" (deleted the parent_student row) — each verified after restoring the DB.
+  - Guards: driver visiting /parent/home → "Access denied"; no session → redirect to /login.
+
+- Gotchas for others:
+  1. Never paste a multi-statement SQL seed block twice. The second pass hits 1062 on the users INSERT, but the drivers INSERT still runs and `LAST_INSERT_ID()` carries the id from the previous successful insert — two driver rows got attached to the wrong users (one a student). Fix with a role filter + keep-oldest-per-user delete.
+  2. Link-table column names are inconsistent: `parent_student.student_user_id` vs `trip_students.student_id`.
+  3. Endpoint 15 (`GET /parents/me/children`) was not in the contract — added and documented in the same PR.
+  4. `web/uploads/` did not exist on this machine, so the seeded `license_url` paths pointed at nothing; real files must exist there to be served.
+
+## 2026-09-24 — Tamara — T11 — Student trip status page
+
+- What was added: student page at /student/home titled "Trip Status" showing the student's own trip only (active / ended / no-trip), with loading, error + retry and a refresh. Implemented contract entry 14 (`GET /students/{studentId}/trip-status`). Page was later restyled to the T2 "Student Trip Status" mockup.
+
+- New/changed: NEW web/app/api/students/[studentId]/trip-status/route.ts · NEW web/app/student/home/page.tsx · CHANGED web/app/login/page.tsx (student → /student/home) · CHANGED web/docs/API_CONTRACT.md (entry 14 planned → live, v5). No DB change.
+
+- How it was tested:
+  - Endpoint: 200 (student viewing own id) · 200 (parent viewing linked child) · 403 (student viewing another student) · 403 (parent viewing an unlinked child) · 403 (driver) · 401 (no token) · 400 (non-numeric id) · 404 (unknown student).
+  - Page in browser: active (end_time null), ended (`UPDATE trips SET end_time`), no-trip (deleted `trip_students` row) — all three states verified, then restored.
+  - Guards: driver and student hitting /student/home → "Access denied"; no session → redirect to /login. Refresh re-fetches ("Last updated" advances).
+
+- Gotchas for others:
+  1. The route file MUST sit at the exact URL path: `web/app/api/students/[studentId]/trip-status/route.ts`. A missing `[studentId]` (or missing `api`) folder makes Next return its HTML "This page could not be found" 404 — which is NOT our JSON 404. List every route with `Get-ChildItem web/app -Recurse -Filter route.ts -Name` before debugging anything else. This cost hours twice.
+  2. After adding or moving a route folder, stop the dev server, delete `web/.next`, and start one server — a stale process/port answers the old route set.
+  3. The T2 mockup shows ~12 trip states; the data only supports 3. ETA, timeline, route, pickup/drop-off stops, bus number, driver name, map, report-a-problem and help were cut (no data/endpoint behind them).
+  4. The page is reached by decoding the JWT in the browser (`userId`) and calling `/api/students/<ownId>/trip-status` — the server still enforces own-id-only.
+
+## 2026-09-24 — Tamara — T12 — License inline preview in admin dashboard
+
+- What was added: /admin/drivers now renders each driver's license inline — image files as a thumbnail that expands on click; PDF files fall back to a protected "View PDF" link instead of an inline image. Both are fetched with the admin's Bearer token; endpoint 8 was not modified.
+
+- New/changed: CHANGED web/lib/view-license.ts (extracted `fetchLicenseBlob`, added `licenseKind`) · CHANGED web/app/admin/drivers/page.tsx (new `LicensePreview` component). No endpoint, DB or contract changes.
+
+- How it was tested:
+  - Admin /admin/drivers: `.jpg` license rendered inline (thumbnail → click to enlarge → close) · `.pdf` license showed the "📄 View PDF" button and opened the file in a new tab.
+  - Permission regression: driver viewing own file → 200 · driver viewing another driver's file → 403 · anonymous → 401 · legacy `?token=` URL → 401.
+  - (The earlier anonymous 200 was a Postman leftover `Authorization` header, confirmed by loading the URL in a plain browser → `{"error":"No token"}`.)
+
+- Gotchas for others:
+  1. License files are Bearer-only, so `<img src="/api/driver/license/...">` can never work. Fetch with `Authorization`, then `res.blob()` → `URL.createObjectURL()`, and `URL.revokeObjectURL()` when done/unmounted.
+  2. Postman's "No Auth" can still transmit a manually-added `Authorization` header — verify anonymously in a plain browser instead.
+  3. `<img>` cannot render a PDF; fall back by extension (`.jpg/.jpeg/.png` inline, `.pdf` link, anything else → "Open file").
+  4. Test files must actually exist in `web/uploads/`; the repo ships none.
+
+
 ## ⬇️ RAW ZONE — append your block below this line, don't touch anything above
 
 Format (the end-of-task prompt already generates this — just paste it):
