@@ -11,7 +11,9 @@ Rules:
 - Web/API: `http://localhost:3000` (web/, npm run dev)
 - DB: MySQL/WAMP — busbuddy_app (schema: database/schema.sql)
 - Mobile: Expo Go on phone — BASE_URL in mobile/api.js = PC's LAN IPv4
-- Test data: 1 admin + 2 drivers. Make an admin: signup via UI →
+- Test data: run `database/seed.sql` (T13) → admin + verified/pending drivers
+  + student + linked parent (all `@busbuddy.test`, pw `Test1234!` / `Parent1234!`).
+  Manual method still works — signup via UI →
   UPDATE users SET role='admin' WHERE email='...';
 
 ---
