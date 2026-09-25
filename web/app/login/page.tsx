@@ -65,13 +65,16 @@ const submit = async (e: FormEvent<HTMLFormElement>) => {
            login(data.token, data.role);
     setMsg(`Login successful as ${data.role}. ✅`);
 
-       if (data.role === 'admin') {
+ if (data.role === 'admin') {
       router.push('/admin/home');
     } else if (data.role === 'driver') {
-      router.push('/driver/status');
+      router.push('/driver/home');
     } else if (data.role === 'student') {
       router.push('/student/home');
+    } else if (data.role === 'parent') {
+      router.push('/parent/home');
     }
+    
 
 
   } catch (err) { // CHANGED — add err param
