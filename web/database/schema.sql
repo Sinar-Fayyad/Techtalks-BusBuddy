@@ -88,4 +88,14 @@ CREATE TABLE trip_students (                     -- NEW TABLE
 --   CONSTRAINT fk_trip_students_student FOREIGN KEY (student_id)
 --     REFERENCES users(id) ON DELETE CASCADE
 -- ) ENGINE=InnoDB;
+--
+-- 2026-09-25 — Wassim — T13: seed data for local dry runs (NO schema change)
+-- NEW FILE database/seed.sql — run AFTER this file. Seeds the sprint-flow test set:
+--   1 admin · 1 VERIFIED driver (license /uploads/seed-driver-license.png)
+--   · 1 pending driver (license /uploads/seed-driver2-license.pdf)
+--   · 1 student · 1 parent linked to that student (parent_student row)
+--   all emails @busbuddy.test · passwords Test1234! (admin/drivers) / Parent1234! (parent/student)
+-- Idempotent: re-runs insert nothing, ids stay stable (guarded by WHERE NOT EXISTS).
+-- Full reset (optional): DELETE FROM users WHERE email LIKE '%@busbuddy.test'; then re-run.
+-- License FILES are NOT in git (uploads/ gitignored) — see T13 PR description to generate them.
 -- ==============================================
