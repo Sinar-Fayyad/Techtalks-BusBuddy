@@ -1,4 +1,4 @@
- import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
 
@@ -9,7 +9,7 @@ export async function GET(
   { params }: { params: Promise<{ studentId: string }> }
 ) {
   try {
-    // --- 1. AUTH ---
+    // --- 1. AUTH: same first block as every protected route here ---
     const auth = req.headers.get('authorization');
     if (!auth?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'No token' }, { status: 401 });
@@ -38,7 +38,7 @@ export async function GET(
       return NextResponse.json({ error: 'User is not a student' }, { status: 403 });
     }
 
-    // --- 4. PERMISSION ---
+    // --- 4. PERMISSION: who is asking? ---
     const role = payload.role;
     if (role === 'student') {
       if (payload.userId !== studentId) {
@@ -56,7 +56,7 @@ export async function GET(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    // --- 5. FIND the trip: active first, else the most recent ended ---
+    // --- 5. FIND the trip: active first, then the most recent ended one ---
     const base = `
       SELECT t.id, t.driver_id,
              CAST(t.start_time AS CHAR) AS start_time,

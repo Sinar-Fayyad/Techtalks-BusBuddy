@@ -68,7 +68,8 @@ DB: parent_student (composite PK parent_user_id+student_user_id — duplicate = 
 
 Planned (designed, NOT yet implemented — do not call):
 13. POST /trips/{tripId}/students 🔒 admin — assign a student to a trip. Body { "studentId" } · 201 · 401/403/404/409.
-## BusBuddy API Contract — v5 (24/09) — T10 parent trip status
+
+## BusBuddy API Contract — v5 (24/09) — T10 parent + T11 student trip status
 
 14. GET /students/{studentId}/trip-status 🔒 student (own) / parent (linked child) / admin (any)
 Returns the student's active trip; if none, their most recent ended trip; otherwise null.
