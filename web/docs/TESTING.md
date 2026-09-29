@@ -4,27 +4,21 @@ Rules:
 
 - Every task: test success AND error cases before opening the PR.
 - At sprint end, the tester runs the full checklist and records results (✅/❌ + note).
-- Tools: browser + DevTools (UI), Postman/Apidog (API), phpMyAdmin (DB truth), Expo Go (mobile).
+- Tools: browser + DevTools (UI), curl/Postman/Apidog (API), mysql CLI or phpMyAdmin (DB truth), Expo Go (mobile).
+- Anonymous/permission checks: verify in a plain browser or fresh curl — leftover headers can fake a pass.
 
 ## Environment
 
-- Web/API: `http://localhost:3000` (web/, npm run dev)
-- DB: MySQL/WAMP — busbuddy_app (schema: database/schema.sql)
+- Web/API: http://localhost:3000 (web/, npm run dev)
+- DB: MySQL/WAMP — BusBuddy_app (schema: database/schema.sql). Ports differ per machine (testing PC = 3308) — check .env.local, never hardcode.
 - Mobile: Expo Go on phone — BASE_URL in mobile/api.js = PC's LAN IPv4
-- Test data: run `database/seed.sql` (T13) → admin + verified/pending drivers
-  + student + linked parent (all `@busbuddy.test`, pw `Test1234!` / `Parent1234!`).
-  Since T14 the seed also creates ONE ACTIVE TRIP (verified driver, student on
-  board) → /parent/home shows "In Transit" immediately. Stopped it while
-  testing? Re-run seed.sql for a fresh active trip.
-  Manual method still works — signup via UI →
-  UPDATE users SET role='admin' WHERE email='...';
+- Test data: run database/schema.sql then database/seed.sql → admin + verified/pending drivers + students + linked parent (all @busbuddy.test, pw Test1234! / Parent1234!) + ONE ACTIVE TRIP (verified driver, student on board) → /parent/home shows "In Transit" immediately. Seed times MUST stay UTC_TIMESTAMP(3) — never NOW(). Stopped the trip while testing? Re-run seed.sql.
+- web/uploads/ is gitignored — recreate seed license files per machine (recipes in T14 PR description).
 
----
-
-## Sprint 1 — Registration & approval (12/09) — 20/20 ✅
+## Sprint 0 — Registration & approval (12/09) — 20/20 ✅
 
 | # | Test | Expected | Result |
-|---|------|----------|--------| 
+|---|------|----------|--------|
 | 1 | Signup (name, email, password) | 201 User created | ✅ |
 | 2 | Duplicate email | 409 | ✅ |
 | 3 | Missing fields | 400 | ✅ |
@@ -46,9 +40,7 @@ Rules:
 | 19 | Form → admin integration | appears in pending list | ✅ |
 | 20 | DB state check | drivers.status matches action | ✅ |
 
----
-
-## Sprint 2 — Integration testing (18/09, Sinar) — Web 14/14 ✅ · Mobile 6/6 ✅
+## Sprint 1 — Integration testing (18/09, Sinar) — Web 14/14 ✅ · Mobile 6/6 ✅
 
 ### Web (W)
 
@@ -64,16 +56,17 @@ Rules:
 | W8 | Admin views any license | file opens | ✅ |
 | W9 | License request, no token | 401 | ✅ |
 | W10 | Admin Verify / Reject | drivers.status updates in DB | ✅ |
-| W11 | /driver/status shows own data only | own status, others' impossible (no URL id) | ✅ |
+| W11 | /driver/status shows own data only | own status, others' impossible | ✅ |
 | W12 | Status updates live (pending → verified) | refresh shows VERIFIED | ✅ |
-| W13 | Trips: start → 201, double-start → 409, stop → 200, stop again → 404 | as listed | ✅ |
-| W14 | Admin GET driver trips | correct rows, newest first | ✅ |### Sprint 3 — test-method changes (web cleanup PR, 2026-09-XX)
+| W13 | Trips: start 201 / double 409 / stop 200 / stop again 404 | as listed | ✅ |
+| W14 | Admin GET driver trips | correct rows, newest first | ✅ |
 
-- W6/W8: license opens via "View license file" button / "license" link
-  (Bearer + blob viewer, web/lib/view-license.ts). Expected unchanged: file displays.
+### Test-method changes (21/09 web cleanup)
+
+- W6/W8: license opens via "View license file" button / "license" link (Bearer + blob viewer, web/lib/view-license.ts). Expected unchanged: file displays.
 - W7: UI no longer exposes other drivers' file URLs. Run as DRIVER via DevTools console:
   fetch('/api/driver/license/<OTHER_FILE>', { headers: { Authorization: 'Bearer ' + localStorage.getItem('bb_token') } }).then(r => r.status) → 403
-- W9: file URL with no token → 401. Legacy ?token=... URLs also return 401 (hardened).
+- W9: file URL with no token → 401. Legacy ?token=... URLs also 401 (hardened, Bearer-only).
 
 ### Mobile (M)
 
@@ -86,27 +79,89 @@ Rules:
 | M5 | "Create an account" link | opens RegisterScreen | ✅ |
 | M6 | Full loop: register on phone → admin verifies on web → login on phone | works | ✅ |
 
----
+## Bugs found & fixed while integration-testing (Sprint 1)
 
-## Bugs found & fixed while integration-testing (Sprint 2)
-
-1. DB port 3308 leaked from one teammate's machine → ECONNREFUSED everywhere. Fix: DB_PORT in .env.local, never hardcode local config.
+1. DB port 3308 leaked from one teammate's machine → ECONNREFUSED everywhere. Fix: DB_PORT in .env.local, never hardcode.
 2. Repo schema SQL outdated (password vs password_hash) → signup crashed. Fix: ALTER TABLE users CHANGE password password_hash VARCHAR(255) NOT NULL.
 3. users/drivers were MyISAM → error #1824 creating trips FK. Fix: ALTER TABLE ... ENGINE=InnoDB.
 4. Token payload field mismatch (code read id/sub, token has userId) → driver 403 on own license. Fix: read userId first.
-5. T3 vs T7 conflict (admins-only vs driver views own file) → rule: admin = any file, driver = only own license_url.
-6. Mobile RegisterScreen unreachable (no link). Fix: register link on LoginScreen.
+5. T3 vs T7 conflict → rule: admin = any file, driver = only own license_url.
+6. Mobile RegisterScreen unreachable. Fix: register link on LoginScreen.
+
+## Sprint 2 — Integration testing (29/09, Wassim) — on dev incl. T8–T12
+
+Environment: Windows 10 · WAMP MySQL 8.0.18 port 3308 · Next.js dev :3000 · branch `feature/T14-integration-dry-run` (off dev @ ee6919f, incl. merged T13 + T12). Fresh seed re-run before the pass. Tools: curl (API, fresh Bearer token per request), Chromium preview (UI, DOM/img checks), mysql CLI (DB truth). phpMyAdmin and Expo Go NOT used this pass.
+
+### New tests (W15+)
+
+| # | Test | Steps | Expected | Result |
+|---|------|-------|----------|--------|
+| W15 | Login all seeded roles | POST /auth/login ×5 (admin/driver×2/student/parent) | 200 + correct role each | ✅ |
+| W16 | Login wrong password | POST /auth/login, bad pw | 401 | ✅ |
+| W17 | Admin list permission matrix | admin 200 · driver token · no token | 200 · 403 · 401 | ✅ |
+| W18 | License matrix W6–W9 + hardening | admin→PNG 200 image/png · admin→PDF 200 application/pdf · driver own 200 · driver→other 403 · student token 403 · no token 401 · legacy ?token= 401 · `..%2F` traversal 400 · missing 404 | as listed | ✅ |
+| W19 | Seed → student sees ACTIVE trip | GET /students/4/trip-status (student token) | trip with end_time null | ✅ |
+| W20 | Student with no trip | GET /students/6/trip-status | {"trip":null} | ✅ |
+| W21 | Double-start on seeded trip | POST /driver/trips/start while seed trip active | 409 | ✅ |
+| W22 | Stop the seeded trip | POST /driver/trips/stop | 200, end_time set | ✅ |
+| W23 | Stop again | POST /driver/trips/stop | 404 | ✅ |
+| W24 | Fresh start after stop | POST /driver/trips/start | 201 | ✅ |
+| W25 | Pending driver starts trip | driver2 (pending) token | 403 | ✅ |
+| W26 | Admin trips list + bad id | GET /admin/drivers/1/trips · /abc/trips | 200 newest-first · 400 | ✅ |
+| W27 | Parent lists children (endpoint 15) | GET /parents/me/children | 200, both linked children | ✅ |
+| W28 | Link child SUCCESS | signup student3 → POST /parents/me/children | 201 "Child linked" | ✅ |
+| W29 | Link error guards | dup 409 · missing 404 · target admin 403 · driver token 403 · no token 401 · bad body 400 | as listed | ✅ |
+| W30 | Trip-status after stop | GET /students/4/trip-status | same trip, end_time set | ✅ |
+| W31 | Student views another student | student1 token → /students/6/trip-status | 403 | ✅ |
+| W32 | Registration loop E2E | signup (defaults driver) → upload 201 → profile 201 → dup 409 → admin verify 200 → /driver/me verified | as listed | ✅ |
+| W33 | /parent/home In-Transit | login parent in browser, select student1 | "🚌 In Transit" + start time | ✅ |
+| W34 | /parent/home no-trip state | select student2 | "🗓 No trip today" | ✅ |
+| W35 | Parent session survives refresh | F5 on /parent/home | still logged in, same data | ✅ |
+| W36 | /student/home live trip | student token → /student/home | "Trip in progress", trip id, Active | ✅ |
+| W37 | /driver/home 409 resync | Start (seed trip active) → friendly msg + flips to Stop → Stop → "Last trip" summary | as listed | ✅ |
+| W38 | Admin inline preview (T12) | /admin/drivers: driver3 PNG + driver2 PDF pending | PNG renders inline `<img>`; PDF shows "📄 View PDF" | ✅ |
+| W39 | Admin login redirect | login as admin in browser | lands on working admin page | ❌ redirects to /admin/home → 404 (page doesn't exist) |
+
+### Regressions re-run this pass
+
+| # | Test | Result |
+|---|------|--------|
+| W1 | Driver signup → upload → profile E2E (API) | ✅ (see W32) |
+| W5 | Driver token on /admin/drivers (browser) | ✅ blocked |
+| W6 | Driver views own license | ✅ 200 image/png |
+| W7 | Driver → other driver's license | ✅ 403 |
+| W8 | Admin views any license | ✅ 200 (PNG + PDF) |
+| W9 | License, no token / legacy ?token= | ✅ 401 both |
+| W10 | Admin Verify (+ Reject in T13 pass) | ✅ 200, status in DB |
+| W13 | Trips 201/409/200/404 | ✅ (W21–W24) |
+| W14 | Admin GET driver trips | ✅ (W26) |
+| W3 | Refresh stays logged in | ✅ admin/parent/student; driver refresh not separately observed (same code path) |
+| W2/W4/W11/W12 | Not re-run this pass | ⬜ superseded by W17/W33–W36 coverage; Sprint-1 results stand |
+| M1–M6 | Mobile regression | ⬜ not run — no Expo device/emulator this session |
+| Quick checks (upload bad type / >5MB, /login empty fields, server-off) | not run this session | ⬜ |
+
+### Fixes made during testing (on T14 branch — merge before claiming)
+
+1. web/app/auth-context.tsx — session restore dropped student/parent roles → "Access denied" after F5. Widened filter to all 4 roles; re-verified refresh for admin/parent/student.
+2. database/seed.sql — NOW(3) → UTC_TIMESTAMP(3): NOW() wrote WAMP local time (+3) vs API's UTC → start>end rows. One-time CONVERT_TZ repair applied to existing rows. Reset recipe corrected for FK-safe order (trips → drivers → links → users).
+3. Docs only: schema.sql change-log + TESTING.md seed notes.
+
+**Tally: 34 ✅ (24 new + 10 regression) · 1 ❌ (W39) · 14 ⬜ not re-run this pass.**
 
 ## Quick checks still pending ⬜
 
 - /login empty fields → inline error, no network call (DevTools)
-- ✅ Server stopped → friendly error on login/register (verified during web-cleanup task)
 - License upload validation: wrong type → 400, >5MB → 400
+- PDF license viewing: confirm once in real Chrome (test webview can't render blob:; API responses verified via curl)
+- ✅ Server stopped → friendly error on login/register (verified 21/09 web cleanup; not re-run this pass)
 
-## Known issues → Sprint 3
+## Known issues → next sprint
 
-- License preview not inline in /admin/drivers (link only) — STILL OPEN
-- ~~No logout/back button on /driver/status~~ — done (web cleanup PR)
-- ~~No shared Error component~~ — done (ErrorMessage on login/register/status/admin; other pages adopt as they're finished)
-- Mobile: no shared Button/Input components; no driver status screen
-- ~~?token= in URLs can leak into history/logs~~ — done (Bearer-only, contract v3)
+1. Admin login → /admin/home → 404 (W39 ❌) — page doesn't exist on dev
+2. Endpoint 13 (POST /trips/{id}/students) contract-planned, NOT built — student-trip linking via direct trip_students SQL only. Don't call it.
+3. Mobile M1–M6 not re-run this pass (no device); mobile still has no driver-status/trip screens
+4. Seed "full reset" recipe documented but not executed end-to-end after edit
+
+---
+
+Testers: Sprint 0 + Sprint 1 — Sinar · Sprint 2 — Wassim

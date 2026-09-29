@@ -7,174 +7,66 @@
 - Single sources of truth — do NOT duplicate them here:
   Endpoints → web/docs/API_CONTRACT.md · Database → database/schema.sql · Tests → web/docs/TESTING.md
 
-## Current state (cleaned 18/09 — Sino + AI)
+## Current state (cleaned 29/09 — Sino + AI)
 
 ### Stack
 
 - web/ — Next.js App Router: UI in app/, API in app/api/
-- mobile/ — Expo/React Native: App.js = session controller, screens as separate files
-- DB — MySQL (WAMP), BusBuddy_app, all tables InnoDB → database/schema.sql
-- Auth — JWT { userId, role } 7d · web: localStorage bb_token/bb_role (auth-context) · mobile: expo-secure-store (same keys)
+- mobile/ — Expo/React Native: src/App.js + src/screens/ (Login/Home/Register), shared Button/Input — unchanged this sprint
+- DB — MySQL (WAMP), BusBuddy_app, all InnoDB → database/schema.sql · seed data → database/seed.sql
+- Auth — JWT { userId, role } 7d · roles: admin/driver/student/parent · web: localStorage bb_token/bb_role via auth-context (restores ALL 4 roles on refresh) · mobile: expo-secure-store (same keys)
 
 ### Setup on a new machine
 
-1. web/.env.local → DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, JWT_SECRET, DB_PORT (ports differ per machine — ask, never hardcode)
-2. Fresh DB → run database/schema.sql. Old DB → check its change log.
-3. npm install in web/ AND mobile/ (again after any pull that adds packages)
+1. web/.env.local → DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, JWT_SECRET, DB_PORT (ports differ per machine — testing PC uses 3308; ask, never hardcode)
+2. Fresh DB → run database/schema.sql, then database/seed.sql (test accounts @busbuddy.test + ONE active trip; idempotent — WHERE NOT EXISTS guard, never creates a second active trip). Old DB → check its change log.
+3. Recreate web/uploads/ license files per machine (gitignored — recipes in the T14 PR description #18)
+4. npm install in web/ AND mobile/
 
-### What exists now (end of Sprint 2)
+### What exists now (end of Sprint 2 — built 21–24/09, integration-tested 29/09 by Wassim)
 
-- Web: landing → login (role redirects) → /admin/drivers (session, verify/reject, logout) → /driver/register → /driver/status (own status + own license file)
-- License rule: admin = any file · driver = ONLY own · anonymous = 401
-- Trips APIs: start (409 guard) / stop / admin list — verified live (201/409/200/404)
-- Mobile: login ↔ register navigation, secure session surviving restarts, registration end-to-end
-- Full loop proven: register on phone → admin verifies on web → new driver logs in on phone
+- Roles: signup/login for all 4 roles; login redirects → admin:/admin/home ⚠️404 (page missing, W39) · driver:/driver/home · student:/student/home · parent:/parent/home
+- Driver: /driver/register (license upload) · /driver/status (own status + own license + logout) · /driver/home (Start/Stop trip — verified only; 409 double-start / 404 stop-without-trip resync the UI)
+- Admin: /admin/drivers (session, verify/reject, license inline preview: image inline, PDF via protected link)
+- Parent: /parent/home — children selector + linked child's trip status (active/ended/no-trip); linked children ONLY
+- Student: /student/home — own trip status only
+- APIs: trips start/stop/admin-list · GET /students/{id}/trip-status (student=own, parent=linked) · POST+GET /parents/me/children
+- License rule: admin = any file · driver = ONLY own · anonymous = 401 · Bearer-header only (no ?token=)
+- DB times stored UTC — seed uses UTC_TIMESTAMP(3), NEVER NOW()
+- Mobile: no new features this sprint (refactor only)
 
 ### Conventions (unchanged rules)
 
 - Never invent endpoints — update the contract in the same PR
 - Never hardcode local config; mobile BASE_URL = PC LAN IPv4
-- Web UI: shared components + CSS variables only; errors = friendly message + console.error in catch
-- DB changed? → append the query to database/schema.sql change log (same PR)
+- Web UI: shared components + CSS variables; errors = ErrorMessage component + console.error
+- DB changed? → append to database/schema.sql change log (same PR)
+- Test data → database/seed.sql; seed trip times must stay UTC_TIMESTAMP(3)
 
-### Known gaps → Sprint 3
+### Known gaps → Sprint 3 (priority order)
 
-- License preview inline in /admin/drivers · logout/back on /driver/status
-- Pages to match Dana's mockups · shared Error component
-- Mobile: shared Button/Input · driver status screen
-- ?token= URL hardening
+1. /admin/home doesn't exist — admin login dead-ends with 404 (W39 ❌, pre-existing — owner needed)
+2. Endpoint 13 (assign student to trip) contract-planned, never built — linking students to trips = direct SQL only
+3. Upload-validation quick-checks pending (wrong type 400, >5MB 400, /login empty fields) · PDF viewing to confirm once in real Chrome
+4. Mobile: M1–M6 not re-run this pass; still no driver-status/trip screens
+5. Seed "full reset" recipe documented, never executed end-to-end
+6. Parent page styling + full mockup parity (route/ETA/alerts cut — no endpoints behind them)
 
 ### Weekly recaps
 
-- Sprint 1 (→12/09): signup/login, driver profile, admin approval, registration UIs (web+mobile). 20 tests ✅. Gaps carried: no sessions, manual tokens.
-- Sprint 2 (15–18/09): sessions + guards, driver status page, license permission model, trips APIs, mobile refactor+login. Integration bugs fixed: leaked DB port, outdated schema, MyISAM→#1824, token field mismatch, T3/T7 license conflict, unreachable RegisterScreen. W1–W14 ✅ M1–M6 ✅. New package: expo-secure-store.
+- Sprint 0 (→12/09): signup/login, driver profile, admin approval, registration UIs (web+mobile). 20 tests ✅.
+- Sprint 1 (15–18/09): sessions + guards, driver status, license permission model, trips APIs, mobile refactor+login. Bugs fixed: leaked DB port, outdated schema, MyISAM→#1824, token field mismatch, T3/T7 license conflict, unreachable RegisterScreen. W1–W14 ✅ M1–M6 ✅.
+- Sprint 2 (21–24/09, tested 29/09 by Wassim): 4 roles + parent_student/trip_students + trips location columns · driver home start/stop · parent + student trip-status pages · admin license inline preview · web/mobile cleanup. Fixes during testing: auth-context restores all 4 roles on refresh; seed NOW(3)→UTC_TIMESTAMP(3) + one-time CONVERT_TZ repair. Result: 34 ✅ · 1 ❌ (W39 /admin/home 404) · 14 not re-run. Details: TESTING.md W15+.
 
 ---
 
-## 21/09 — Sinar — DB migration: roles + relationships + trip location
-
-- What was done: users.role ENUM extended with 'student','parent' (appended, safe for existing rows). trips gained nullable latitude/longitude DECIMAL(9,6) + location_updated_at DATETIME(3). New InnoDB link tables parent_student and trip_students with composite PKs (= unique pair) and FK ON DELETE CASCADE to users/trips.
-- New/changed: DB only — database/schema.sql (updated CREATE TABLEs for users/trips + 2 new tables + change-log entry). No endpoints, no app code. Teammates upgrade by running the change-log block.
-- Tested: signup/login still work in UI; existing rows unchanged (location = NULL). Success: insert parent→student link, insert trip_student, new roles accepted. Errors: duplicate pair → 1062, non-existent student → 1452, delete user → CASCADE removed link rows.
-- Gotchas: FK columns must match users.id/trips.id types exactly; never reorder ENUM values (internal numeric mapping); composite PK already enforces the unique pair; FKs guarantee row existence, NOT role correctness (parent-vs-student checks belong in a future API task). Migration runs once — ADD COLUMN fails if repeated.
-
-## 21/09 — Sinar — Web cleanup: Error component, logout, token hardening
-
-- What was done: shared ErrorMessage component (friendly box, role=alert, renders null when empty) adopted on /login, /driver/register, /driver/status, /admin/drivers; catches now do console.error + friendly message per convention. Logout button added on /driver/status (outside the data block, works with no driver profile). License GET hardened to Bearer-header ONLY — ?token= fallback removed, missing token = 401; response now sends correct Content-Type. New web/lib/view-license.ts: fetch with Bearer → blob → objectURL in a pre-opened tab (popup-blocker safe), revoked after 60s.
-- New/changed: NEW web/components/ErrorMessage/ (index.tsx + module.css), web/lib/view-license.ts. CHANGED api/driver/license/[name]/route.ts, app/driver/status/page.tsx, app/admin/drivers/page.tsx, app/login/page.tsx, app/driver/register/page.tsx, docs/API_CONTRACT.md (v3: entry 8 Bearer-only), docs/TESTING.md (W6–W9 methods updated, 1 quick-check ticked, 3 known issues resolved).
-- Tested: admin views any license (displays), driver views own file (displays), driver views other's file → 403 (DevTools fetch), no token → 401, legacy ?token= URL → 401, global search ?token= = 0 hits. Server-off forced failure → friendly box + console.error on login/register. W1–W14 regression: all pass.
-- Gotchas: license GET must send Content-Type or blobs open as downloads; window.open must run synchronously inside the click or popup blockers kill it; ?token= links die by design (401) — anyone with old saved URLs sees 401; register pages still being built keep inline errors — adopt ErrorMessage when their tasks finish.
-
-## 21/09 — Sinar — Mobile cleanup: src/ structure + shared components
-
-- What was done: restructured Expo app — App.js → src/App.js, screens → src/screens/ (Login/Home/Register), index.js entry repointed to './src/App' (package.json "main": "index.js" unchanged). New shared src/components/Button.js (label/onPress/loading/disabled/style/textStyle, built-in ActivityIndicator, disabled=disabled||loading) and Input.js (controlled TextInput, neutral layout-only base). Both adopted in all three screens with existing styles passed in — visuals unchanged. api.js deliberately left at root; BASE_URL and secure-store keys untouched.
-- New/changed: NEW mobile/src/components/Button.js, Input.js. MOVED src/App.js, src/screens/{LoginScreen,HomeScreen,RegisterScreen}.js. CHANGED mobile/index.js (1 line). Imports updated (./api → ../../api). No endpoint/DB changes.
-- Tested: npx expo start -c boots cleanly from new structure (after each stage). M1–M6 all pass: phone login, session survives restart, wrong-password error, phone register E2E, create-account link, full register→verify→login loop. Screens visually identical to before.
-- Gotchas: index.js import must point at src/App or the app white-screens; always restart with expo start -c after moving files (Metro cache); shared Input defaults autoCapitalize='none' — plain-text fields (Full name) need explicit autoCapitalize="sentences" to preserve RN default; RegisterScreen keeps "Registering..." text via conditional label + disabled, NOT the loading prop (spinner would be a behavior change); delete old root copies of moved files or Metro may resolve stale ones.
-
-## 21/09 — jad — T8 API: parent/student auth + relationships + trip status
-
-
-
-- What was done: signup now accepts role "student"/"parent" via a VALID_ROLES allowlist (unknown roles fall back to driver, preserving old behavior). Built endpoint 1 of 3: POST /api/parents/me/children (parent self-links a child; checks in order: Bearer/JWT 401 → role≠parent 403 → body validation 400 → target missing 404 / target not a student 403 → duplicate check + ER_DUP_ENTRY safety net 409). Endpoints "assign student to trip" and "GET trip status" NOT built; API_CONTRACT.md NOT yet updated (required by task rules).
-- New/changed: CHANGED web/app/api/auth/signup/route.ts · NEW web/app/api/parents/me/children/route.ts. DB: ran Sinar's 21/09 change-log migration on my local WAMP (no schema.sql change — already in the file). No contract/docs changes yet.
-- Tested: SUCCESS — signup parent+student → 201; login returns "role":"parent"/"student"; link child → 201 "Child linked"; DB shows one parent_student row. ERROR cases (409 duplicate, 403 self/wrong-role, 404 missing, 401 no token, 400 bad body) planned as T8–T13 but NOT confirmed run — must be executed before PR.
-- Gotchas for others: (1) My local DB was missing the 21/09 migration — ENUM without student/parent silently stored role='' (non-strict MySQL). Signup "worked" (201) but login gave role:"" and every role guard failed. Run the change-log block BEFORE testing anything from this task, then DELETE FROM users WHERE role=''. (2) A Next.js HTML 404 means the route file isn't where the server looks (exact path: app/api/parents/me/children/route.ts) — our JSON 404s never render HTML. (3) JWTs can't be recovered — re-login mints a fresh one; check the login response's "role" field as ground truth. (4) Apidog: paste ONLY the token into Bearer Token (no "Bearer " prefix). (5) PowerShell curl: wrap JSON bodies in single quotes, not \" escapes.
-
-## 22/9 — jad — T9 Driver trip controls UI (web)
-
-- What was done: new driver home page (web) adapted from mockup screen 1: greeting + driver name + verified badge; Start/Stop trip buttons on existing endpoints 9/10; buttons render ONLY for verified drivers (pending/rejected get an explanation card, criterion met); 409 double-start shows a friendly message AND flips the UI to Stop mode; 404 stop-without-trip flips back to Start; network failures → friendly box + console.error. Mockup elements deliberately cut (trip route/bus/student counts, Today's Summary, Alerts, bottom nav) — no endpoints provide that data; listed in PR description.
-- New/changed: NEW web/app/driver/home/page.tsx · CHANGED web/app/login/page.tsx (1 line: driver redirect → /driver/home) · CHANGED web/app/driver/status/page.tsx (additive "Trip controls →" link, verified-only) — both glue edits approved. No endpoint, DB, or contract changes.
-- Tested (T1–T11, all pass): verified driver lands on /driver/home; start flips to Stop + "Trip in progress" (trips row created, end_time NULL, verified in DB); trip visible in admin trips list; two-tab double-start → friendly 409 + flip; stop sets end_time (DB verified); stale-tab stop → friendly 404 + flip back; pending and rejected drivers see no buttons; server-off → friendly error + console.error; regression on login/status/license/admin list clean.
-- Gotchas for others: 409/404 handlers repair UI state (setOnTrip) instead of only showing text — no "GET my active trip" endpoint exists, so the button flip on 409/404 is how the client resyncs; a future GET-active-trip endpoint would remove this (contract candidate, not invented here). Register→admin-verify→home loop used to create test drivers; keep test credentials noted (bcrypt hashes can't be recovered).
-
-## 2026-09-24 — Tamara — T10 — Parent trip status page
-
-- What was added: parent page at /parent/home that shows the linked child's trip status (active / ended / no-trip) and a "No child linked" empty state. Added a new "list my children" endpoint so the page can find the child's id. The T10 branch was rebuilt from scratch (its earlier changes had been discarded), which included re-creating the shared trip-status endpoint file.
-
-- New/changed: NEW web/app/api/students/[studentId]/trip-status/route.ts (re-created on this branch) · CHANGED web/app/api/parents/me/children/route.ts (added GET handler) · NEW web/app/parent/home/page.tsx · CHANGED web/app/login/page.tsx (parent → /parent/home) · CHANGED web/docs/API_CONTRACT.md (entry 14 → live; new entry 15). No DB change.
-
-- How it was tested:
-  - GET /parents/me/children: 200 with linked child · 401 no token · 403 driver.
-  - GET /students/2/trip-status as parent: 200 (linked child) · 403 for an unlinked child.
-  - Page in browser: active trip, ended trip (via `UPDATE trips SET end_time`), no-trip (deleted the trip_students row), and "No child linked" (deleted the parent_student row) — each verified after restoring the DB.
-  - Guards: driver visiting /parent/home → "Access denied"; no session → redirect to /login.
-
-- Gotchas for others:
-  1. Never paste a multi-statement SQL seed block twice. The second pass hits 1062 on the users INSERT, but the drivers INSERT still runs and `LAST_INSERT_ID()` carries the id from the previous successful insert — two driver rows got attached to the wrong users (one a student). Fix with a role filter + keep-oldest-per-user delete.
-  2. Link-table column names are inconsistent: `parent_student.student_user_id` vs `trip_students.student_id`.
-  3. Endpoint 15 (`GET /parents/me/children`) was not in the contract — added and documented in the same PR.
-  4. `web/uploads/` did not exist on this machine, so the seeded `license_url` paths pointed at nothing; real files must exist there to be served.
-
-## 2026-09-24 — Tamara — T11 — Student trip status page
-
-- What was added: student page at /student/home titled "Trip Status" showing the student's own trip only (active / ended / no-trip), with loading, error + retry and a refresh. Implemented contract entry 14 (`GET /students/{studentId}/trip-status`). Page was later restyled to the T2 "Student Trip Status" mockup.
-
-- New/changed: NEW web/app/api/students/[studentId]/trip-status/route.ts · NEW web/app/student/home/page.tsx · CHANGED web/app/login/page.tsx (student → /student/home) · CHANGED web/docs/API_CONTRACT.md (entry 14 planned → live, v5). No DB change.
-
-- How it was tested:
-  - Endpoint: 200 (student viewing own id) · 200 (parent viewing linked child) · 403 (student viewing another student) · 403 (parent viewing an unlinked child) · 403 (driver) · 401 (no token) · 400 (non-numeric id) · 404 (unknown student).
-  - Page in browser: active (end_time null), ended (`UPDATE trips SET end_time`), no-trip (deleted `trip_students` row) — all three states verified, then restored.
-  - Guards: driver and student hitting /student/home → "Access denied"; no session → redirect to /login. Refresh re-fetches ("Last updated" advances).
-
-- Gotchas for others:
-  1. The route file MUST sit at the exact URL path: `web/app/api/students/[studentId]/trip-status/route.ts`. A missing `[studentId]` (or missing `api`) folder makes Next return its HTML "This page could not be found" 404 — which is NOT our JSON 404. List every route with `Get-ChildItem web/app -Recurse -Filter route.ts -Name` before debugging anything else. This cost hours twice.
-  2. After adding or moving a route folder, stop the dev server, delete `web/.next`, and start one server — a stale process/port answers the old route set.
-  3. The T2 mockup shows ~12 trip states; the data only supports 3. ETA, timeline, route, pickup/drop-off stops, bus number, driver name, map, report-a-problem and help were cut (no data/endpoint behind them).
-  4. The page is reached by decoding the JWT in the browser (`userId`) and calling `/api/students/<ownId>/trip-status` — the server still enforces own-id-only.
-
-## 2026-09-24 — Tamara — T12 — License inline preview in admin dashboard
-
-- What was added: /admin/drivers now renders each driver's license inline — image files as a thumbnail that expands on click; PDF files fall back to a protected "View PDF" link instead of an inline image. Both are fetched with the admin's Bearer token; endpoint 8 was not modified.
-
-- New/changed: CHANGED web/lib/view-license.ts (extracted `fetchLicenseBlob`, added `licenseKind`) · CHANGED web/app/admin/drivers/page.tsx (new `LicensePreview` component). No endpoint, DB or contract changes.
-
-- How it was tested:
-  - Admin /admin/drivers: `.jpg` license rendered inline (thumbnail → click to enlarge → close) · `.pdf` license showed the "📄 View PDF" button and opened the file in a new tab.
-  - Permission regression: driver viewing own file → 200 · driver viewing another driver's file → 403 · anonymous → 401 · legacy `?token=` URL → 401.
-  - (The earlier anonymous 200 was a Postman leftover `Authorization` header, confirmed by loading the URL in a plain browser → `{"error":"No token"}`.)
-
-- Gotchas for others:
-  1. License files are Bearer-only, so `<img src="/api/driver/license/...">` can never work. Fetch with `Authorization`, then `res.blob()` → `URL.createObjectURL()`, and `URL.revokeObjectURL()` when done/unmounted.
-  2. Postman's "No Auth" can still transmit a manually-added `Authorization` header — verify anonymously in a plain browser instead.
-  3. `<img>` cannot render a PDF; fall back by extension (`.jpg/.jpeg/.png` inline, `.pdf` link, anything else → "Open file").
-  4. Test files must actually exist in `web/uploads/`; the repo ships none.
-
-
 ## ⬇️ RAW ZONE — append your block below this line, don't touch anything above
 
+Format (the end-of-task prompt already generates this — just paste it):
 
-
-## 29/9 — Wassim Mahmoud — T14 Integration testing + sprint report (seed active trip)
+## [date] — [name] — [task]
 
 - What was done (2-3 lines)
 - Files added/changed
 - Tested: success + error cases
 - Gotchas for others (or "none")
-
-Extends database/seed.sql (T13) with ONE ACTIVE TRIP: verified driver driving
-(end_time NULL) + student1 on board (trip_students row). Guarded with
-WHERE NOT EXISTS — idempotent, can never create a second active trip.
-schema.sql change-log entry + TESTING.md seed note updated. No schema change.
-
-Dry run on final dev (T8–T12 merged), all green:
-- Logins: 5 roles, correct role each; wrong password 401
-- License W6–W9: own 200 image/png · other driver 403 · student 403 ·
-  no token 401 · ?token= 401 · traversal 400 · missing 404
-- Trips: seeded active trip → 409 double-start → stop 200 → 404 →
-  fresh start 201 · pending 403 · admin list 200 / bad id 400
-- Parents: POST children 201 + 409/404/403/401/400 · GET children (15) 200 ·
-  trip-status (14) active → ended → null branches
-- Registration E2E: signup → upload 201 → profile 201 → dup 409 → verify 200
-- UI: /parent/home "In Transit" + "No trip today", survives refresh ·
-  /student/home live trip · /driver/home 409 flip → stop · admin inline PNG
-  preview + "View PDF" fallback
-
-Gotchas for reviewers:
-1. Seed bug fixed: NOW(3) wrote local time (WAMP tz +3) vs API's UTC →
-   start > end rows. Now UTC_TIMESTAMP(3); one-time CONVERT_TZ repaired
-   existing rows.
-2. Pre-existing (NOT fixed here): admin login redirects to /admin/home →
-   404. Admin-home owner should fix.
-
-   
