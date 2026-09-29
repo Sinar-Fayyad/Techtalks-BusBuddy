@@ -13,6 +13,9 @@ Rules:
 - Mobile: Expo Go on phone — BASE_URL in mobile/api.js = PC's LAN IPv4
 - Test data: run `database/seed.sql` (T13) → admin + verified/pending drivers
   + student + linked parent (all `@busbuddy.test`, pw `Test1234!` / `Parent1234!`).
+  Since T14 the seed also creates ONE ACTIVE TRIP (verified driver, student on
+  board) → /parent/home shows "In Transit" immediately. Stopped it while
+  testing? Re-run seed.sql for a fresh active trip.
   Manual method still works — signup via UI →
   UPDATE users SET role='admin' WHERE email='...';
 
