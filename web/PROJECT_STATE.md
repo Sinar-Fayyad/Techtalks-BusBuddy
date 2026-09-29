@@ -143,11 +143,38 @@
 
 ## ⬇️ RAW ZONE — append your block below this line, don't touch anything above
 
-Format (the end-of-task prompt already generates this — just paste it):
 
-## [date] — [name] — [task]
+
+## 29/9 — Wassim Mahmoud — T14 Integration testing + sprint report (seed active trip)
 
 - What was done (2-3 lines)
 - Files added/changed
 - Tested: success + error cases
 - Gotchas for others (or "none")
+
+Extends database/seed.sql (T13) with ONE ACTIVE TRIP: verified driver driving
+(end_time NULL) + student1 on board (trip_students row). Guarded with
+WHERE NOT EXISTS — idempotent, can never create a second active trip.
+schema.sql change-log entry + TESTING.md seed note updated. No schema change.
+
+Dry run on final dev (T8–T12 merged), all green:
+- Logins: 5 roles, correct role each; wrong password 401
+- License W6–W9: own 200 image/png · other driver 403 · student 403 ·
+  no token 401 · ?token= 401 · traversal 400 · missing 404
+- Trips: seeded active trip → 409 double-start → stop 200 → 404 →
+  fresh start 201 · pending 403 · admin list 200 / bad id 400
+- Parents: POST children 201 + 409/404/403/401/400 · GET children (15) 200 ·
+  trip-status (14) active → ended → null branches
+- Registration E2E: signup → upload 201 → profile 201 → dup 409 → verify 200
+- UI: /parent/home "In Transit" + "No trip today", survives refresh ·
+  /student/home live trip · /driver/home 409 flip → stop · admin inline PNG
+  preview + "View PDF" fallback
+
+Gotchas for reviewers:
+1. Seed bug fixed: NOW(3) wrote local time (WAMP tz +3) vs API's UTC →
+   start > end rows. Now UTC_TIMESTAMP(3); one-time CONVERT_TZ repaired
+   existing rows.
+2. Pre-existing (NOT fixed here): admin login redirects to /admin/home →
+   404. Admin-home owner should fix.
+
+   

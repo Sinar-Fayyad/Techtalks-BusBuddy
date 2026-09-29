@@ -98,4 +98,13 @@ CREATE TABLE trip_students (                     -- NEW TABLE
 -- Idempotent: re-runs insert nothing, ids stay stable (guarded by WHERE NOT EXISTS).
 -- Full reset (optional): DELETE FROM users WHERE email LIKE '%@busbuddy.test'; then re-run.
 -- License FILES are NOT in git (uploads/ gitignored) — see T13 PR description to generate them.
+--
+-- 2026-09-29 — Wassim — T14: seed now includes ONE ACTIVE TRIP (NO schema change)
+-- database/seed.sql extended: after the 5 base users + link it also inserts
+--   · 1 ACTIVE trip (trips row, end_time NULL) for the VERIFIED driver
+--   · 1 trip_students row — student1 on board, so /parent/home shows "In Transit"
+--     and GET /students/{studentId}/trip-status returns the live trip right after seed.
+-- Guarded (WHERE NOT EXISTS): only inserted if the driver has no active trip —
+-- re-runs stay idempotent and can never create a second active trip.
+-- Stopped the trip while testing? Just re-run seed.sql to get a fresh active one.
 -- ==============================================
