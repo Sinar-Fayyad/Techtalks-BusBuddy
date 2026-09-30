@@ -83,3 +83,20 @@ Returns the student's active trip; if none, their most recent ended trip; otherw
 The logged-in parent's linked children (students only).
 200: { children: [ { id, name, email } ] }   (empty array when none linked)
 401 missing/invalid token · 403 not a parent · 500
+
+## BusBuddy API Contract — v6 (30/9) — T4 driver location ping
+
+Changed v6: entry 14 (trip-status) response `trip` object now ALSO includes
+`latitude`, `longitude`, `location_updated_at` (all null until a location is sent).
+Values are UTC strings; latitude/longitude come back as DECIMAL strings (e.g. "33.573110"), not numbers.
+
+16. POST /driver/trips/location 🔒 verified driver with an ACTIVE trip
+Records a GPS ping on the caller's active trip. No URL id — the trip is found from the token.
+Body: { "latitude": number, "longitude": number }
+200: { message, trip: { id, driver_id, start_time, end_time, latitude, longitude, location_updated_at } }
+   times UTC strings · end_time null = ACTIVE · latitude/longitude are DECIMAL strings
+400 invalid JSON body / latitude or longitude missing, not a number, or out of range
+    (lat -90..90, lng -180..180) · 401 missing/invalid token
+403 not a driver · driver not verified
+404 no driver profile · 409 no active trip
+Note: DECIMAL(9,6) — extra decimal precision is rounded by MySQL.

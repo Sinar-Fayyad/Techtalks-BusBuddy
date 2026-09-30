@@ -57,10 +57,12 @@ export async function GET(
     }
 
     // --- 5. FIND the trip: active first, then the most recent ended one ---
-    const base = `
+     const base = `
       SELECT t.id, t.driver_id,
              CAST(t.start_time AS CHAR) AS start_time,
-             CAST(t.end_time AS CHAR) AS end_time
+             CAST(t.end_time AS CHAR) AS end_time,
+             t.latitude, t.longitude,
+             CAST(t.location_updated_at AS CHAR) AS location_updated_at
       FROM trips t
       JOIN trip_students ts ON ts.trip_id = t.id
     `;
