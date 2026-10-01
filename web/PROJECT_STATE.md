@@ -63,6 +63,55 @@
 ## ⬇️ RAW ZONE — append your block below this line, don't touch anything above
 
 Format (the end-of-task prompt already generates this — just paste it):
+## 2026-10-01 — Tamara — T4 Location API
+
+- Added POST /driver/trips/location for a verified driver's active trip: validates
+  latitude/longitude (400), rejects wrong role (403), rejects no active trip (409),
+  401 without token; on success writes latitude, longitude and location_updated_at.
+- New/changed: new web/app/api/driver/trips/location/route.ts · web/docs/API_CONTRACT.md
+  updated in the same PR · trips table already had the three GPS columns (no schema change).
+- Tested: 401 no token · 403 student token ("Not a driver") · 400 invalid coordinates ·
+  409 no active trip (after stopping the seed trip) · success path run after re-running
+  database/seed.sql, coordinates read back with a SELECT on trips.
+- Gotchas: http://localhost:3000/api returns 404 in a browser — normal, there is no index
+  route. Stopping the seed trip leaves driver1 with NO active trip; re-run database/seed.sql
+  (against BusBuddy_app) to get exactly one active trip back. Seed trip times stay UTC.
+## 2026-10-01 — Tamara — T5 /admin/home page (W39 fix)
+
+- Created the missing admin landing page so admin login stops dead-ending at a 404.
+- New: web/app/admin/home/page.tsx only. Reuses useAuth() (token/role/ready/logout),
+  Button and the CSS variables exactly like /admin/drivers. No DB / API / contract change.
+- Guards: no session -> router.replace('/login') · logged-in non-admin -> "Access denied"
+  screen with Log out. Cards: Drivers (live Link to /admin/drivers) and Trips (disabled
+  "Coming soon" — NOT a link, because no /admin/trips route exists).
+- Tested: admin login -> lands on /admin/home, both cards, no 404 · driver session opening
+  /admin/home -> "Access denied" · logged-out/incognito opening /admin/home -> redirected
+  to /login.
+- Gotchas: login ALREADY redirected to /admin/home — only the page was missing, so no
+  login-page edit was needed. Flip the Trips card from <div> to <Link> once an /admin/trips
+  page exists. Branch was named T5—/admin/home-page-(W39-fix), not the feature/ convention.
+## 2026-10-01 — Tamara — T6 LiveBusMap component
+
+- Added a reusable client-only Leaflet + OpenStreetMap component showing a bus as a single
+  marker that is moved in place (no recreation, no jank).
+- New: web/components/LeafletMap.tsx (map + one custom L.divIcon marker; updates via
+  marker.setLatLng; null coords -> marker removed + "Location unavailable"; stale
+  location_updated_at -> marker kept + "Last known position") ·
+  web/components/LiveBusMap.tsx ('use client' wrapper loading LeafletMap through
+  next/dynamic({ ssr: false }) so Leaflet never runs on the server).
+- Changed: web/app/layout.tsx (import 'leaflet/dist/leaflet.css' AFTER globals.css so the
+  Tailwind v4 preflight can't override Leaflet's styles) · web/package.json +
+  web/package-lock.json (leaflet@1.9.4, @types/leaflet@1.9.22).
+- Tested in the browser with a temporary /map-test harness (deleted, NOT committed):
+  loads with no "window is not defined" and no hydration error · marker glides in place on
+  simulated movement, one marker, no flicker · null coordinates -> message + marker removed,
+  recovers on fresh coords · old timestamp -> "Last known position", clears when fresh.
+- Gotchas: next/dynamic({ ssr:false }) must be called from a 'use client' file (it throws in
+  a Server Component). API timestamps have no timezone, so the component appends 'Z' before
+  parsing (DB stores UTC). Initializing state with a time value (nowUtc()) in the test page
+  caused a hydration mismatch — set time-dependent state inside useEffect instead. The
+  component is STANDALONE (props latitude / longitude / locationUpdatedAt) and is NOT wired
+  into any page yet — T3's output was still unknown.
 
 ## [date] — [name] — [task]
 
