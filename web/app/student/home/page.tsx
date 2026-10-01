@@ -4,13 +4,19 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../auth-context';
 import Button from '@/components/Button';
 import ErrorMessage from '@/components/ErrorMessage';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import LiveBusMap from '@/components/LiveBusMap';
 
 interface TripInfo {
   id: number;
   driver_id: number;
   start_time: string;
   end_time: string | null;
+  latitude: string | null;
+  longitude: string | null;
+  location_updated_at: string | null;
 }
+
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
@@ -35,10 +41,12 @@ export default function StudentHomePage() {
   }, [ready, token, router]);
 
   // --- LOAD MY TRIP ---
-  const loadTrip = useCallback(async () => {
-    if (!token) return;
-    setError('');
-    setLoaded(false);
+   const busyRef = useRef(false);
+
+  const loadTrip = useCallback(async (silent = false) => {
+    if (!token || busyRef.current) return;
+    busyRef.current = true;
+    if (!silent) { setError(''); setLoaded(false); }
     try {
       const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
       const me = JSON.parse(atob(base64));
@@ -47,25 +55,31 @@ export default function StudentHomePage() {
       });
       if (res.status === 401) { logout(); return; }
       if (!res.ok) {
-        setError('Something went wrong — we could not load your trip status.');
-        setLoaded(true);
+        if (!silent) setError('Something went wrong — we could not load your trip status.');
+        else console.error('Trip status poll failed:', res.status);
         return;
       }
       const data = await res.json();
       setTrip(data.trip);
       setLastUpdated(new Date());
-      setLoaded(true);
+      setError('');
     } catch (err) {
       console.error('Trip status failed:', err);
-      setError('Server error — is the dev server running?');
+      if (!silent) setError('Server error — is the dev server running?');
+    } finally {
+      busyRef.current = false;
       setLoaded(true);
     }
   }, [token, logout]);
 
-  useEffect(() => {
+
+    useEffect(() => {
     if (!ready || !token || role !== 'student') return;
     loadTrip();
+    const id = setInterval(() => { void loadTrip(true); }, 10_000);
+    return () => clearInterval(id);
   }, [ready, token, role, loadTrip]);
+
 
   // --- WRONG ROLE → Access denied ---
   if (ready && token && role !== 'student') {
@@ -132,6 +146,17 @@ export default function StudentHomePage() {
                 {active ? 'Your bus is currently on the way.' : 'Your trip has been completed.'}
               </p>
             </section>
+                        {active && (
+              <section style={card}>
+                <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '1.05rem', fontWeight: 700 }}>Live location</h2>
+                <LiveBusMap
+                  latitude={trip.latitude}
+                  longitude={trip.longitude}
+                  locationUpdatedAt={trip.location_updated_at}
+                />
+              </section>
+            )}
+
 
             <section style={card}>
               <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '1.05rem', fontWeight: 700 }}>Trip Summary</h2>
