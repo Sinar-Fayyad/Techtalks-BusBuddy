@@ -113,6 +113,67 @@ Format (the end-of-task prompt already generates this — just paste it):
   component is STANDALONE (props latitude / longitude / locationUpdatedAt) and is NOT wired
   into any page yet — T3's output was still unknown.
 
+## 2026-10-01 — Jad Kamal El Dine — T7 Driver GPS sharing UI
+
+- Added GpsShare component: watchPosition keeps the newest fix in a ref; a 2s timer
+  POSTs to endpoint 16 (POST /driver/trips/location) at most once per 10s, first fix
+  sent immediately; auto-stops on trip stop / page unmount via effect cleanup;
+  PERMISSION_DENIED shows a friendly message and Start/Stop stay usable.
+- New/changed: NEW web/components/GpsShare.tsx (standalone, prop tripActive) ·
+  EDIT web/app/driver/home/page.tsx (1 import + <GpsShare tripActive={onTrip} />).
+  No API/DB/contract change — endpoint 16 already existed (contract v6).
+- Tested: intern reported the feature working end-to-end in the browser after a
+  build fix ("all worked"); the itemized checklist (≤4 POSTs per 30s, DB
+  location_updated_at advancing ~10s, auto-stop on Stop/unmount, permission-denied
+  usability, 409 via second tab) was not reported back itemized — re-verify in the
+  integration pass. 401 n/a (UI gated on driver session).
+- Gotchas: fresh machines need `npm install` after pulling — we hit
+  "Module not found: leaflet/dist/leaflet.css" because T6 added leaflet to
+  package.json. Geolocation needs a secure context: localhost OK, http://LAN-IP is
+  blocked by the browser — test GPS on localhost. auth-context imports as
+  '@/app/auth-context' from components/.
+## 2026-10-01 — Jad Kamal El Dine — T8 Student live map
+
+- /student/home now polls GET /students/{id}/trip-status every 10s in silent mode
+  (busyRef guards overlapping fetches, no screen flash, keeps last good data on
+  transient errors) and shows a "Live location" card reusing T6's LiveBusMap,
+  rendered ONLY while the trip is active (ended/no-trip = no map, no marker).
+- New/changed: EDIT web/app/student/home/page.tsx only (polling effect, TripInfo
+  extended with latitude/longitude/location_updated_at as DECIMAL strings per
+  contract v6, LiveBusMap card). No API/DB/contract change.
+- Tested: checklist issued (1 GET/10s cadence in Network tab, live marker via
+  driver tab, ended trip → map disappears within 10s, no-trip state, 403 via
+  console fetch with foreign studentId, DB cross-check) — results were not
+  reported back in chat; treat as untested until re-run.
+- Gotcha: a student shows "No trip scheduled" unless linked in trip_students —
+  endpoint 13 was never built, so links exist only via seed/manual SQL. Check
+  database/seed.sql before assuming a bug. DECIMAL coords arrive as strings; if
+  LiveBusMap's props expect numbers, adapt at the call site (do not edit the T6
+  component).
+## 2026-10-01 — Jad Kamal El Dine — T9 GET /driver/trips/active
+
+- New endpoint 17 (contract v7): GET /driver/trips/active 🔒 driver — read-only
+  LEFT JOIN drivers→trips (end_time IS NULL) by token userId, no URL id. Returns
+  200 { trip: {...} } with the same shape as endpoint 16 (UTC time strings via
+  CAST AS CHAR, DECIMAL-string latitude/longitude/location_updated_at) or
+  { trip: null } when there is no active trip OR no driver row (documented, not 404).
+  401 missing/invalid token · 403 not a driver · 500.
+- New/changed: NEW web/app/api/driver/trips/active/route.ts · EDIT
+  web/app/driver/home/page.tsx (ActiveTripInfo interface + load-on-mount effect
+  with cancelled-flag for StrictMode; refresh mid-trip now shows Stop immediately —
+  the start-409 flip stays only as a two-tab safety net) · EDIT
+  web/docs/API_CONTRACT.md (v7, entry 17). No DB change.
+- Tested: API direct — 200 {trip:null} with no active trip · 200 with trip after
+  Start (cross-checked with SELECT on trips) · 401 without Authorization header ·
+  403 with a student token. Page — refresh mid-trip shows ⏹ Stop immediately,
+  no-trip refresh shows ▶ Start, second-tab stop then refresh shows Start;
+  regression: normal start/stop and T7 GpsShare gating still work.
+- Gotchas: read-only GET needs NO transaction/FOR UPDATE (locks are for writers
+  like /stop). The load effect ignores stale responses via a cancelled flag —
+  required for React StrictMode's dev double-mount. lastTrip state type widened to
+  ActiveTripInfo (GPS fields may be null). Contract updated in the SAME PR (rule:
+  never call an endpoint that isn't in the contract).
+
 ## [date] — [name] — [task]
 
 - What was done (2-3 lines)
