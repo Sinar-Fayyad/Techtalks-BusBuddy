@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../auth-context';
 import Button from '@/components/Button';
 import ErrorMessage from '@/components/ErrorMessage';
+import GpsShare from '@/components/GpsShare';
 
 interface DriverInfo {
   name: string;
@@ -168,6 +169,8 @@ export default function DriverHomePage() {
             ) : (
               <Button color="primary" onClick={startTrip}>{starting ? 'Starting…' : '▶ Start Trip'}</Button>
             )}
+                        <GpsShare tripActive={onTrip} />
+
           </section>
         )}
 
