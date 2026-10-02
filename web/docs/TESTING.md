@@ -148,20 +148,33 @@ Environment: Windows 10 · WAMP MySQL 8.0.18 port 3308 · Next.js dev :3000 · b
 
 **Tally: 34 ✅ (24 new + 10 regression) · 1 ❌ (W39) · 14 ⬜ not re-run this pass.**
 
-## Quick checks still pending ⬜
-
-- /login empty fields → inline error, no network call (DevTools)
-- License upload validation: wrong type → 400, >5MB → 400
-- PDF license viewing: confirm once in real Chrome (test webview can't render blob:; API responses verified via curl)
-- ✅ Server stopped → friendly error on login/register (verified 21/09 web cleanup; not re-run this pass)
+## Quick checks ✅ — executed 2026-10-04 (T14, see Sprint 3 block below)
 
 ## Known issues → next sprint
 
-1. Admin login → /admin/home → 404 (W39 ❌) — page doesn't exist on dev
+1. ~~Admin login → /admin/home → 404 (W39 ❌)~~ ✅ FIXED (T5) — /admin/home renders in real Chrome, confirmed 2026-10-04 during T14
 2. Endpoint 13 (POST /trips/{id}/students) contract-planned, NOT built — student-trip linking via direct trip_students SQL only. Don't call it.
 3. Mobile M1–M6 not re-run this pass (no device); mobile still has no driver-status/trip screens
-4. Seed "full reset" recipe documented but not executed end-to-end after edit
+4. ~~Seed "full reset" recipe documented but not executed end-to-end after edit~~ ✅ executed end-to-end 2026-10-04 (T14 Q5)
 
 ---
 
 Testers: Sprint 0 + Sprint 1 — Sinar · Sprint 2 — Wassim
+
+## Sprint 3 — T14 pending quick-checks (2026-10-04) — 5/5 ✅
+
+Environment: Windows · WAMP MySQL 3306 · BusBuddy_app · web dev :3000 · branch feature/t14-pending-quick-checks. Fresh seed reset FIRST (DELETE trips/trip_students + seed users → re-import database/seed.sql), then all checks on the fresh DB. License files recreated per-machine: 1×1 PNG via PowerShell base64, PDF via Chrome print-to-PDF (~102 KB).
+
+| # | Test | Steps | Expected | Result |
+|---|------|-------|----------|--------|
+| Q1 | Upload wrong type | curl POST /api/driver/license, driver1 token, test-bad-type.txt | 400 | ✅ `{"error":"Only PDF, JPG, PNG allowed"}` 400 |
+| Q2 | Upload >5MB | same, test-big.jpg (6,291,456 bytes via fsutil) | 400 | ✅ `{"error":"Max 5MB"}` 400 |
+| Q3 | /login empty fields | Chrome DevTools Network tab, click Log in with both fields empty | inline error, NO network call | ✅ "Email is required" + "Password is required" inline; Network shows only 2 font requests, zero API calls |
+| Q4 | PDF license in real Chrome | admin → /admin/drivers → Seed Driver Two → View PDF | PDF renders in new tab (blob URL) | ✅ seed-driver2-license.pdf renders |
+| Q5 | Full seed reset end-to-end | phpMyAdmin SQL: DELETE trip_students; trips; seed users → Import seed.sql | 5 users, 1 link, exactly 1 active trip, UTC times | ✅ users ids 15–19 (driver1 verified+PNG, driver2 pending+PDF), 1 link (parent 19 → student 18), trip id 10 end_time NULL, start 18:31 UTC = 21:31 local (UTC+3) |
+
+Notes / gotchas:
+- PowerShell `[IO.File]::WriteAllBytes` ignores the shell's current folder — always pass the FULL absolute path (it wrote to C:\WINDOWS\system32 silently otherwise).
+- Seed reset CHANGES user ids (now 15–19) — re-check ids before any hardcoded-id debugging.
+- Bonus observation: admin login → /admin/home renders correctly (W39 fix confirmed in real Chrome).
+- License-file recipes (for any machine): PNG = PowerShell base64 one-liner (bytes in T14 PR description) · PDF = Chrome Ctrl+P → Save as PDF → rename to seed-driver2-license.pdf.
