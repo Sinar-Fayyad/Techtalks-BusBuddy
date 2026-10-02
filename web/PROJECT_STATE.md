@@ -174,6 +174,76 @@ Format (the end-of-task prompt already generates this — just paste it):
   ActiveTripInfo (GPS fields may be null). Contract updated in the SAME PR (rule:
   never call an endpoint that isn't in the contract).
 
+## 2026-10-03 — [your name] — T10 Endpoint 13: assign student to trip
+
+- Implemented contract entry 13: POST /trips/{tripId}/students 🔒 admin — inserts a
+  trip_students row. Ended trips allowed (contract never required an active trip —
+  now stated explicitly in v8).
+- New/changed: NEW web/app/api/trips/[tripId]/students/route.ts · web/docs/API_CONTRACT.md
+  v8 block (entry 13 implemented) in the same PR. No DB change (trip_students existed).
+- Tested (Thunder Client — Postman wouldn't launch on this machine): 201 success (row verified
+  via SELECT on trip_students) · 409 duplicate · 400 /trips/abc · 400 missing/invalid studentId ·
+  404 trip 999999 · 404 student 999999 · 403 target-not-a-student · 401 no/garbage token ·
+  403 student token · cross-check: GET /students/13/trip-status → 200 with the assigned trip.
+- Gotchas: mid-testing the dev server returned 500 on ALL routes — missing leaflet (T6 dep,
+  `npm install` after pulling is mandatory), environmental, no code bug. Test-user ids differ
+  per machine (created via signup, not seed) — check users table before assuming a bug.
+
+## 2026-10-03 — Sinar — T11 Driver trip history
+
+- GET /driver/trips (entry 18): caller's OWN last 5 trips, newest first (token → drivers.user_id,
+  no URL id; { trips: [] } when none/no driver row — entry-17 precedent). "My trips" card on
+  /driver/home (date, start→end, Active/Ended from end_time), auto-refreshes after Start/Stop.
+- New/changed: NEW web/app/api/driver/trips/route.ts · EDIT web/app/driver/home/page.tsx
+  (additive only) · EDIT web/docs/API_CONTRACT.md (v9 block + chronological reorder + landed
+  T9's missing v7/entry 17 + GpsShare import fix — separate disclosed commits, one PR).
+- Tested: API — 200 own trips (matches DB cross-check SELECT exactly) · 200 {trips:[]} fresh
+  driver · 401 no/garbage token · 403 admin token · 403 student token. UI — card renders,
+  Active↔Ended flips after Stop/Start without refresh, console clean (expected 409 on
+  double-start only).
+- Gotchas: PR #26 (T9) had merged ONLY route.ts — contract v7 + page effect missing from dev;
+  v7 landed here (coordinated with Jad). GpsShare.tsx imported '@/lib/auth-context' (compiled
+  only where uncommitted local files existed) → fixed to '@/app/auth-context' in this PR.
+  T9's PAGE effect (active-trip load on mount) is STILL MISSING → stale ▶ Start button when a
+  trip is already active → follow-up T9b-page. Empty SQL for a fresh driver = documented empty
+  path, not a bug.
+
+## 2026-10-03 — Sinar — T12 Map freshness UI
+
+- LeafletMap: live "Updated Xs ago" (1s ticker), grey marker + warning when the last GPS fix is
+  older than staleAfterMs (student page passes 30s; T6 default 2min kept). Student page: polling
+  interval exists ONLY while an active trip is on screen → stops on trip end AND unmount (no
+  zombie requests); Refresh picks up a new trip.
+- New/changed: NEW web/components/LeafletMap/ (tsx + module.css) + web/components/LiveBusMap/
+  (index.tsx + module.css), loose versions deleted — import path '@/components/LiveBusMap' kept
+  working via index.tsx · EDIT web/app/student/home/page.tsx (split effects gated on activeTrip,
+  staleAfterMs=30_000, Number() conversion of DECIMAL-string coords — map previously showed
+  "Location unavailable" despite valid coordinates). No API/DB/contract change.
+- Tested (browser, driver+student tabs): blue marker + ticking age while driver shared · grey
+  flip at ~31s after sharing stopped · Network 1 req/10s while active → silence after trip
+  completed · silence after navigating away · resumes via Refresh on a new trip.
+- Gotchas: T6 component edited + folder/CSS-module restructure — authorized exception by team
+  lead, disclosed; GpsShare (T7) NOT converted (still flat — convention debt). Student1 sees a
+  new trip only after re-running database/seed.sql or an endpoint-13 call (links never
+  auto-create). INCIDENT: T12 was pushed DIRECTLY to dev instead of via a PR (cherry-pick
+  recovery attempt tangled the feature branch; branch deleted; changes kept on dev with
+  team-lead approval).
+
+## 2026-10-03 — Sinar — Sprint carry-over notes (team lead)
+
+- T9b-page: /driver/home still lacks the active-trip load effect (refresh mid-trip shows ▶
+  Start). Small follow-up, spec'd in T9's log; integration pass must verify it.
+- Component convention: GpsShare.tsx still flat (LeafletMap/LiveBusMap now foldered) — convert
+  during sprint testing (owner T7).
+- GitHub Desktop lesson: a commit contains ONLY ticked files — always read the "N files
+  changed" counter (root cause of PR #26 losing 2 of 3 T9 files).
+- Contract hygiene: entry numbers are IDs, never renumber (MD029 disabled at top of
+  API_CONTRACT.md); file now chronological v2→v9.
+- Welcome page + per-role signup pages (student/driver/parent) — needed, candidate NEXT TASK.
+- UI mockups NOT applied to code yet; bus-list/booking screens need NEW contract endpoints
+  first (none exist — never call what isn't in the contract).
+- T12 went to dev without a PR — approved incident (see T12 block).
+
 ## [date] — [name] — [task]
 
 - What was done (2-3 lines)
