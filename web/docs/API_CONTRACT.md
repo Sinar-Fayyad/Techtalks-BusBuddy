@@ -126,3 +126,14 @@ Body: { "studentId": number }
 404 trip not found · student not found
 409 student already assigned (composite PK trip_id+student_id — dup = ER_DUP_ENTRY,
     surfaced as 409, same as entry 12)
+
+## BusBuddy API Contract — v9 (3/10) — T11 driver trip history
+
+18. GET /driver/trips 🔒 driver
+The caller's OWN last 5 trips, newest first (ORDER BY start_time DESC, id DESC —
+the active trip counts toward the 5). Found via token userId → drivers.user_id,
+no URL id.
+200: { trips: [ { id, driver_id, start_time, end_time, created_at } ] }
+   times are UTC strings (CAST AS CHAR) · end_time = null means ACTIVE
+   { trips: [] } when no trips — or no driver row (documented, not 404, entry-17 precedent)
+401 missing/invalid token · 403 not a driver · 500

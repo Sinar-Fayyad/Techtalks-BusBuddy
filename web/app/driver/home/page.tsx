@@ -27,6 +27,7 @@ export default function DriverHomePage() {
   const [error, setError] = useState('');
   const [starting, setStarting] = useState(false);
   const [stopping, setStopping] = useState(false);
+  const [tripHistory, setTripHistory] = useState<TripInfo[]>([]);
 
   // --- SESSION GUARD: identical to status page ---
   useEffect(() => {
@@ -50,6 +51,27 @@ export default function DriverHomePage() {
       }
     })();
   }, [ready, token, role, logout]);
+
+  // --- TRIP HISTORY (T11): own last 5 trips; refetches after Start/Stop
+  //     because onTrip is a dependency. Cancelled flag guards StrictMode. ---
+  useEffect(() => {
+    if (!ready || !token || role !== 'driver') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/driver/trips', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.status === 401) { logout(); return; }
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        if (!cancelled) setTripHistory(data.trips ?? []);
+      } catch (e) {
+        console.error('Trip history load failed', e); // non-critical: card keeps last data
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [ready, token, role, logout, onTrip]);
 
   // --- START: endpoint 9. 409 = already on a trip → friendly + flip to Stop ---
   const startTrip = async () => {
@@ -188,6 +210,37 @@ export default function DriverHomePage() {
             </p>
           </section>
         )}
+
+        {/* --- T11: My trips — last 5, newest first; status derived from end_time --- */}
+        <section style={{
+          background: 'var(--bb-card-bg)',
+          border: '1px solid var(--bb-link)',
+          borderRadius: 16,
+          padding: '1.5rem',
+          marginTop: '1rem',
+        }}>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 0.75rem 0' }}>My trips</h2>
+          {tripHistory.length === 0 ? (
+            <p style={{ margin: 0, color: 'var(--bb-text-dim)' }}>No trips yet.</p>
+          ) : (
+            <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: '0.75rem' }}>
+              {tripHistory.map((t) => (
+                <li key={t.id} style={{ border: '1px solid var(--bb-link)', borderRadius: 12, padding: '0.75rem 1rem' }}>
+                  <p style={{ margin: 0, fontWeight: 600 }}>{new Date(t.start_time).toLocaleDateString()}</p>
+                  <p style={{ margin: '0.25rem 0 0 0', color: 'var(--bb-text-dim)' }}>
+                    {new Date(t.start_time).toLocaleTimeString()} →{' '}
+                    {t.end_time ? new Date(t.end_time).toLocaleTimeString() : '—'}
+                  </p>
+                  <p style={{ margin: '0.25rem 0 0 0' }}>
+                    {t.end_time
+                      ? <span style={{ color: 'var(--bb-text-dim)' }}>Ended</span>
+                      : <span style={{ color: 'var(--bb-link)', fontWeight: 700 }}>Active now</span>}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       </div>
     </main>
   );
