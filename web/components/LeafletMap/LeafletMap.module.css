@@ -1,0 +1,21 @@
+/* T12: styles moved out of inline JSX into a scoped module.
+   Colors still come from globals.css variables. */
+.mapFrame {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--bb-link);
+  overflow: hidden;
+}
+
+.statusLine {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.statusStale {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--warning, #b45309);
+}

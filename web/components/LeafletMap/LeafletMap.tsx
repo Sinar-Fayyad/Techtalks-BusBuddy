@@ -1,6 +1,7 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
+import styles from './LeafletMap.module.css';
 
 export type LeafletMapProps = {
   latitude: number | null;
@@ -10,16 +11,20 @@ export type LeafletMapProps = {
   height?: number;
 };
 
-// Custom bus marker — avoids Leaflet's famous broken default marker image under bundlers.
-const busIcon = L.divIcon({
-  className: 'bb-bus-marker',
-  html:
-    '<div style="width:32px;height:32px;border-radius:50%;background:#2563eb;' +
-    'color:#fff;display:flex;align-items:center;justify-content:center;' +
-    'font-size:18px;box-shadow:0 2px 6px rgba(0,0,0,.35)">🚌</div>',
-  iconSize: [32, 32],
-  iconAnchor: [16, 16],
-});
+// T12: one icon factory, two colors — fresh (T6's blue) and stale (grey).
+const makeBusIcon = (background: string) =>
+  L.divIcon({
+    className: 'bb-bus-marker',
+    html:
+      '<div style="width:32px;height:32px;border-radius:50%;background:' + background +
+      ';color:#fff;display:flex;align-items:center;justify-content:center;' +
+      'font-size:18px;box-shadow:0 2px 6px rgba(0,0,0,.35)">🚌</div>',
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+  });
+
+const busIcon = makeBusIcon('#2563eb');
+const busIconStale = makeBusIcon('#9ca3af');
 
 // DB stores UTC but the API returns "YYYY-MM-DD HH:MM:SS.mmm" with NO timezone —
 // so we force UTC before parsing, otherwise the age is off by the local offset.
@@ -40,12 +45,22 @@ export default function LeafletMap({
   latitude,
   longitude,
   locationUpdatedAt = null,
-  staleAfterMs = 120_000, // 2 minutes
+  staleAfterMs = 120_000, // 2 minutes default; the student page passes 30s (T12)
   height = 320,
 }: LeafletMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
+
+  // T12: ticking clock for the live "Updated Xs ago" text.
+  // Starts null and is set inside useEffect (hydration lesson from T6's log —
+  // never initialize state with a time value during render).
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    setNow(Date.now());
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const hasCoords =
     typeof latitude === 'number' &&
@@ -54,6 +69,12 @@ export default function LeafletMap({
     Number.isFinite(longitude);
 
   const stale = hasCoords && isStale(locationUpdatedAt, staleAfterMs);
+
+  // T12: live age in whole seconds (null when we have nothing to measure).
+  const ageSeconds =
+    now !== null && locationUpdatedAt && !Number.isNaN(parseUtc(locationUpdatedAt))
+      ? Math.max(0, Math.floor((now - parseUtc(locationUpdatedAt)) / 1000))
+      : null;
 
   // --- 1. Create the map ONCE. Deps are empty on purpose: coordinates must
   //        never recreate the map (that's the jank we're avoiding).
@@ -83,6 +104,8 @@ export default function LeafletMap({
   }, []);
 
   // --- 2. Move ONE marker in place. Never re-create it — just setLatLng().
+  //        T12: also swap the icon (grey) when the position goes stale —
+  //        `stale` is a dependency so setIcon runs only when it FLIPS.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -97,37 +120,38 @@ export default function LeafletMap({
     }
 
     const pos: L.LatLngExpression = [latitude as number, longitude as number];
+    const icon = stale ? busIconStale : busIcon;
 
     if (!markerRef.current) {
-      markerRef.current = L.marker(pos, { icon: busIcon }).addTo(map); // created once
+      markerRef.current = L.marker(pos, { icon }).addTo(map); // created once
     } else {
       markerRef.current.setLatLng(pos); // moved in place — no flicker, no new marker
+      markerRef.current.setIcon(icon);  // T12: grey when stale, blue when fresh
     }
     map.panTo(pos);
-  }, [hasCoords, latitude, longitude]);
+  }, [hasCoords, latitude, longitude, stale]);
 
   return (
     <div>
       <div
         ref={containerRef}
-        style={{
-          height,
-          width: '100%',
-          borderRadius: 12,
-          border: '1px solid var(--bb-link)',
-          overflow: 'hidden',
-        }}
+        className={styles.mapFrame}
+        style={{ height }}
       />
       {!hasCoords && (
-        <p className="mt-2" style={{ color: 'var(--text-muted)', fontSize: 13 }}>
+        <p className={styles.statusLine}>
           Location unavailable — the driver hasn&apos;t shared a position yet.
         </p>
       )}
-      {stale && (
-        <p className="mt-2" style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-          Last known position (updated {new Date(parseUtc(locationUpdatedAt!)).toLocaleString()}).
+      {hasCoords && ageSeconds !== null && (stale ? (
+        <p className={styles.statusStale}>
+          ⚠️ Last known position — updated {ageSeconds}s ago (no fresh GPS from the driver).
         </p>
-      )}
+      ) : (
+        <p className={styles.statusLine}>
+          Updated {ageSeconds}s ago
+        </p>
+      ))}
     </div>
   );
 }
