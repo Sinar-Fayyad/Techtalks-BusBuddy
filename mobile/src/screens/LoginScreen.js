@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { loginRequest } from '../../api';
 import Button from '../components/Button';
 import Input from '../components/Input';
@@ -34,51 +35,59 @@ export default function LoginScreen({ onLogin, onGoRegister }) {
   }
 
   return (
-    <View style={s.container}>
-      <Text style={s.title}>BusBuddy</Text>
-      <Text style={s.subtitle}>Driver login</Text>
+    <LinearGradient
+      colors={['#06b6d4', '#3b82f6', '#a855f7']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={s.flex}
+    >
+      <View style={s.container}>
+        <Text style={s.title}>BusBuddy</Text>
+        <Text style={s.subtitle}>Welcome back</Text>
 
-      <Input
-        style={s.input}
-        placeholder="Email"
-        placeholderTextColor="#999"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-      />
-      <Input
-        style={s.input}
-        placeholder="Password"
-        placeholderTextColor="#999"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
+        <Input
+          style={s.input}
+          placeholder="Email"
+          placeholderTextColor="rgba(255,255,255,0.7)"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+        />
+        <Input
+          style={s.input}
+          placeholder="Password"
+          placeholderTextColor="rgba(255,255,255,0.7)"
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
 
-      {error !== '' && <Text style={s.error}>{error}</Text>}
+        {error !== '' && <Text style={s.error}>{error}</Text>}
 
-      <Button
-        label="Log in"
-        onPress={handleLogin}
-        loading={loading}
-        style={s.button}
-        textStyle={s.buttonText}
-      />
+        <Button
+          label="Log in"
+          onPress={handleLogin}
+          loading={loading}
+          style={s.button}
+          textStyle={s.buttonText}
+        />
 
-      <TouchableOpacity onPress={onGoRegister}>
-        <Text style={s.registerLink}>New driver? Create an account</Text>
-      </TouchableOpacity>
-    </View>
+        <TouchableOpacity onPress={onGoRegister}>
+          <Text style={s.registerLink}>New here? Create an account</Text>
+        </TouchableOpacity>
+      </View>
+    </LinearGradient>
   );
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a', justifyContent: 'center', padding: 24 },
+  flex: { flex: 1 },
+  container: { flex: 1, justifyContent: 'center', padding: 24 },
   title: { color: '#fff', fontSize: 32, fontWeight: '700', textAlign: 'center', marginBottom: 4 },
-  subtitle: { color: '#f59e0b', fontSize: 16, textAlign: 'center', marginBottom: 32 },
-  input: { backgroundColor: '#1e293b', color: '#fff', borderRadius: 24, paddingVertical: 12, paddingHorizontal: 18, marginBottom: 12 },
-  error: { color: '#ef4444', textAlign: 'center', marginBottom: 12 },
-  button: { backgroundColor: '#f59e0b', borderRadius: 24, paddingVertical: 14, alignItems: 'center', marginTop: 8 },
-  buttonText: { color: '#0f172a', fontWeight: '700', fontSize: 16 },
-  registerLink: { color: '#08d9d6', textAlign: 'center', marginTop: 16 },
+  subtitle: { color: 'rgba(255,255,255,0.9)', fontSize: 16, textAlign: 'center', marginBottom: 32 },
+  input: { backgroundColor: 'rgba(255,255,255,0.15)', color: '#fff', borderRadius: 24, paddingVertical: 12, paddingHorizontal: 18, marginBottom: 12 },
+  error: { color: '#fecaca', textAlign: 'center', marginBottom: 12 },
+  button: { backgroundColor: '#0f172a', borderRadius: 24, paddingVertical: 14, alignItems: 'center', marginTop: 8 },
+  buttonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  registerLink: { color: '#a5f3fc', textAlign: 'center', marginTop: 16 },
 });

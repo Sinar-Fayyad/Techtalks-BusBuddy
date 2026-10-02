@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, ScrollView, Image, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { BASE_URL } from '../../api';
@@ -73,43 +74,57 @@ export default function RegisterScreen({ onBack }) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>BusBuddy — Driver Registration</Text>
-      <Input style={styles.input} placeholder="Full name" value={form.name} onChangeText={set('name')} autoCapitalize="sentences" />
-      <Input style={styles.input} placeholder="Email" value={form.email} onChangeText={set('email')} autoCapitalize="none" keyboardType="email-address" />
-      <Input style={styles.input} placeholder="Password" value={form.password} onChangeText={set('password')} secureTextEntry autoCapitalize="none" />
-      <TouchableOpacity style={styles.picker} onPress={pick}>
-        <Text style={styles.pickerText}>
-          {license ? '📎 Photo selected' : '📷 Pick license photo'}
-        </Text>
-      </TouchableOpacity>
-      {license && <Image source={{ uri: license.uri }} style={styles.thumb} />}
-      <Button
-        label={loading ? 'Registering...' : 'Register'}
-        onPress={submit}
-        disabled={loading}
-        style={styles.button}
-        textStyle={styles.buttonText}
-      />
-      {msg !== '' && <Text style={styles.msg}>{msg}</Text>}
-      {error !== '' && <Text style={styles.error}>{error}</Text>}
-      <TouchableOpacity onPress={onBack}>
-        <Text style={styles.backLink}>← Back to login</Text>
-      </TouchableOpacity>
-    </ScrollView>
+    <LinearGradient
+      colors={['#06b6d4', '#3b82f6', '#a855f7']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.flex}
+    >
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.title}>BusBuddy</Text>
+        <Text style={styles.subtitle}>Driver registration</Text>
+
+        <Input style={styles.input} placeholder="Full name" placeholderTextColor="rgba(255,255,255,0.7)" value={form.name} onChangeText={set('name')} autoCapitalize="sentences" />
+        <Input style={styles.input} placeholder="Email" placeholderTextColor="rgba(255,255,255,0.7)" value={form.email} onChangeText={set('email')} autoCapitalize="none" keyboardType="email-address" />
+        <Input style={styles.input} placeholder="Password" placeholderTextColor="rgba(255,255,255,0.7)" value={form.password} onChangeText={set('password')} secureTextEntry autoCapitalize="none" />
+
+        <TouchableOpacity style={styles.picker} onPress={pick}>
+          <Text style={styles.pickerText}>
+            {license ? '📎 Photo selected' : '📷 Pick license photo'}
+          </Text>
+        </TouchableOpacity>
+        {license && <Image source={{ uri: license.uri }} style={styles.thumb} />}
+
+        <Button
+          label={loading ? 'Registering...' : 'Register'}
+          onPress={submit}
+          disabled={loading}
+          style={styles.button}
+          textStyle={styles.buttonText}
+        />
+        {msg !== '' && <Text style={styles.msg}>{msg}</Text>}
+        {error !== '' && <Text style={styles.error}>{error}</Text>}
+
+        <TouchableOpacity onPress={onBack}>
+          <Text style={styles.backLink}>← Back to login</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   container: { flexGrow: 1, justifyContent: 'center', padding: 24 },
-  title: { fontSize: 22, fontWeight: 'bold', marginBottom: 20, textAlign: 'center', color: '#1B2A4A' },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 6, padding: 12, marginBottom: 12, fontSize: 15 },
-  picker: { borderWidth: 1, borderColor: '#1B2A4A', borderRadius: 6, padding: 12, marginBottom: 12, alignItems: 'center' },
-  pickerText: { color: '#1B2A4A', fontWeight: '600' },
-  thumb: { width: '100%', height: 150, borderRadius: 6, marginBottom: 12 },
-  button: { backgroundColor: '#1B2A4A', padding: 14, borderRadius: 6, alignItems: 'center' },
-  buttonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
-  msg: { color: '#16a34a', marginTop: 12, textAlign: 'center' },
-  error: { color: '#dc2626', marginTop: 12, textAlign: 'center' },
-  backLink: { color: '#1B2A4A', marginTop: 20, textAlign: 'center' },
+  title: { fontSize: 32, fontWeight: '700', marginBottom: 4, textAlign: 'center', color: '#fff' },
+  subtitle: { fontSize: 16, marginBottom: 28, textAlign: 'center', color: 'rgba(255,255,255,0.9)' },
+  input: { backgroundColor: 'rgba(255,255,255,0.15)', color: '#fff', borderRadius: 24, paddingVertical: 12, paddingHorizontal: 18, marginBottom: 12, fontSize: 15 },
+  picker: { backgroundColor: 'rgba(255,255,255,0.15)', borderColor: 'rgba(191,219,254,0.7)', borderWidth: 1, borderRadius: 24, paddingVertical: 12, paddingHorizontal: 18, marginBottom: 12, alignItems: 'center' },
+  pickerText: { color: '#fff', fontWeight: '600' },
+  thumb: { width: '100%', height: 150, borderRadius: 12, marginBottom: 12 },
+  button: { backgroundColor: '#0f172a', paddingVertical: 14, borderRadius: 24, alignItems: 'center', marginTop: 8 },
+  buttonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  msg: { color: '#bbf7d0', marginTop: 12, textAlign: 'center' },
+  error: { color: '#fecaca', marginTop: 12, textAlign: 'center' },
+  backLink: { color: '#a5f3fc', marginTop: 20, textAlign: 'center' },
 });
