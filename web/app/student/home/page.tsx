@@ -1,11 +1,10 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../auth-context';
 import Button from '@/components/Button';
 import ErrorMessage from '@/components/ErrorMessage';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import LiveBusMap from '@/components/LiveBusMap';
+import LiveBusMap from '@/components/LiveBusMap/LiveBusMap';
 
 interface TripInfo {
   id: number;
@@ -41,7 +40,7 @@ export default function StudentHomePage() {
   }, [ready, token, router]);
 
   // --- LOAD MY TRIP ---
-   const busyRef = useRef(false);
+  const busyRef = useRef(false);
 
   const loadTrip = useCallback(async (silent = false) => {
     if (!token || busyRef.current) return;
@@ -72,14 +71,24 @@ export default function StudentHomePage() {
     }
   }, [token, logout]);
 
+  // T12: true only while an ACTIVE trip is on screen — gates the polling interval.
+  const activeTrip = trip !== null && trip.end_time === null;
 
-    useEffect(() => {
+  // --- INITIAL LOAD (unchanged behavior) ---
+  useEffect(() => {
     if (!ready || !token || role !== 'student') return;
     loadTrip();
-    const id = setInterval(() => { void loadTrip(true); }, 10_000);
-    return () => clearInterval(id);
   }, [ready, token, role, loadTrip]);
 
+  // --- T12 POLLING: interval exists ONLY while an active trip is loaded.
+  //     Trip ends → last poll returns end_time → activeTrip flips false →
+  //     cleanup clears the interval. Unmount → same cleanup. No zombies. ---
+  useEffect(() => {
+    if (!ready || !token || role !== 'student') return;
+  if (!activeTrip) return; // ended / no trip → NO interval at all
+    const id = setInterval(() => { void loadTrip(true); }, 10_000);
+    return () => clearInterval(id);
+  }, [ready, token, role, loadTrip, activeTrip]);
 
   // --- WRONG ROLE → Access denied ---
   if (ready && token && role !== 'student') {
@@ -146,13 +155,14 @@ export default function StudentHomePage() {
                 {active ? 'Your bus is currently on the way.' : 'Your trip has been completed.'}
               </p>
             </section>
-                        {active && (
+            {active && (
               <section style={card}>
                 <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '1.05rem', fontWeight: 700 }}>Live location</h2>
                 <LiveBusMap
-                  latitude={trip.latitude}
-                  longitude={trip.longitude}
+                  latitude={trip.latitude === null ? null : Number(trip.latitude)}
+                  longitude={trip.longitude === null ? null : Number(trip.longitude)}
                   locationUpdatedAt={trip.location_updated_at}
+                  staleAfterMs={30_000}
                 />
               </section>
             )}
