@@ -153,8 +153,8 @@ Environment: Windows 10 · WAMP MySQL 8.0.18 port 3308 · Next.js dev :3000 · b
 ## Known issues → next sprint
 
 1. ~~Admin login → /admin/home → 404 (W39 ❌)~~ ✅ FIXED (T5) — /admin/home renders in real Chrome, confirmed 2026-10-04 during T14
-2. Endpoint 13 (POST /trips/{id}/students) contract-planned, NOT built — student-trip linking via direct trip_students SQL only. Don't call it.
-3. Mobile M1–M6 not re-run this pass (no device); mobile still has no driver-status/trip screens
+2. ~~Endpoint 13 (POST /trips/{id}/students) contract-planned, NOT built — student-trip linking via direct trip_students SQL only~~ ✅ IMPLEMENTED (T10, 02/10) — admin API only, no UI yet; students linked via API/seed
+3. ~~Mobile M1–M6 not re-run this pass (no device); mobile still has no driver-status/trip screens~~ ✅ M1–M6 6/6 (T15, real device) · T13 added DriverTripScreen — mobile GPS sharing still missing (Sprint 4)
 4. ~~Seed "full reset" recipe documented but not executed end-to-end after edit~~ ✅ executed end-to-end 2026-10-04 (T14 Q5)
 
 ## Sprint 3 — T14 pending quick-checks (2026-10-04) — 5/5 ✅
@@ -176,7 +176,7 @@ Notes / gotchas:
 - Bonus observation: admin login → /admin/home renders correctly (W39 fix confirmed in real Chrome).
 - License-file recipes (for any machine): PNG = PowerShell base64 one-liner (bytes in T14 PR description) · PDF = Chrome Ctrl+P → Save as PDF → rename to seed-driver2-license.pdf.
 
-## Sprint 3 — T15 integration pass (2026-10-02 evening) — W40 + mobile
+## Sprint 3 — T15 integration pass (2026-10-04) — W40 + mobile
 
 Environment: Windows · WAMP MySQL 3306 · BusBuddy_app · web dev :3000 · branch feature/t15-integration-and-report (incl. merged T13/T14). Seed reset run first (T14 recipe). Tools: Chrome ×2 (driver/student tabs), DevTools Network, phpMyAdmin SQL, Expo Go on physical device.
 
@@ -189,7 +189,7 @@ Environment: Windows · WAMP MySQL 3306 · BusBuddy_app · web dev :3000 · bran
 | W40c | Pings every ~10s | DevTools Network on driver tab | POST /driver/trips/location 200, ~1/10s, initiator GpsShare.tsx | ✅ |
 | W40d | Student marker moves | watch student tab ~10s | bus marker + "Updated Xs ago" ticker | ⚠️ marker appeared only AFTER manual student refresh; see finding F1 |
 | W40e | Stop ends sharing | driver → Stop Trip | student map card disappears within ~10s | ✅ |
-| W40f | DB truth | SELECT id, latitude, longitude, location_updated_at, end_time FROM trips ORDER BY id DESC | GPS values + location_updated_at set; end_time NULL while active, filled after stop | ✅ (trip 13: 33.667694 / 35.671859; trips 11–15 all ended) |
+| W40f | DB truth | SELECT id, latitude, longitude, location_updated_at, end_time FROM trips ORDER BY id DESC | GPS verified on watched trip: coords + location_updated_at set while active (end_time NULL); end_time filled after stop | ✅ (watched trip: 33.667694 / 35.671859) |
 
 Findings:
 
@@ -204,4 +204,4 @@ M1 login shows the NEW T13 driver screen (Start/Stop) — expected change from T
 
 ---
 
-Testers: Sprint 0 + Sprint 1 — Sinar · Sprint 2 — Wassim · Sprint 3 — T14/T15
+Testers: Sprint 0 + Sprint 1 — Sinar · Sprint 2 — Wassim · Sprint 3 — Sinar
