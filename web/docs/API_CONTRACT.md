@@ -1,3 +1,5 @@
+<!-- markdownlint-disable MD029 -->
+
 # BusBuddy API Contract — v2 (18/09)
 
 Base URL: `http://localhost:3000/api` — all bodies JSON.
@@ -66,23 +68,6 @@ Body: { "studentId": number }
 Errors: 400 invalid studentId · 401 no/invalid token · 403 not a parent / target user is not a student · 404 student not found · 409 link already exists · 500
 DB: parent_student (composite PK parent_user_id+student_user_id — duplicate = 1062, surfaced as 409).
 
-## BusBuddy API Contract — v8 (2/10) — T10 assign student to trip
-
-Changed v8: entry 13 is now IMPLEMENTED (was "planned, do not call" since v4).
-
-13. POST /trips/{tripId}/students 🔒 admin
-Assigns a student to a trip (inserts a trip_students row). Ended trips allowed —
-no active-trip requirement (contract never had one).
-Body: { "studentId": number }
-201: { "message": "Student assigned to trip" }
-400 non-numeric tripId (entry 11 precedent) · missing/invalid studentId (entry 12 precedent)
-401 missing/invalid token
-403 not an admin · target user is not a student
-404 trip not found · student not found
-409 student already assigned (composite PK trip_id+student_id — dup = ER_DUP_ENTRY,
-    surfaced as 409, same as entry 12)
-
-
 ## BusBuddy API Contract — v5 (24/09) — T10 parent + T11 student trip status
 
 14. GET /students/{studentId}/trip-status 🔒 student (own) / parent (linked child) / admin (any)
@@ -115,3 +100,40 @@ Body: { "latitude": number, "longitude": number }
 404 no driver profile · 409 no active trip
 Note: DECIMAL(9,6) — extra decimal precision is rounded by MySQL.
 
+## BusBuddy API Contract — v7 (2026-10-01) — T9 driver active-trip lookup
+
+17. GET /driver/trips/active 🔒 driver
+The caller's own active trip, or { "trip": null } when none (200 in both cases).
+No URL id — driver found from the token userId → drivers.user_id.
+200: { trip: { id, driver_id, start_time, end_time, latitude, longitude, location_updated_at } | null }
+   times UTC strings (DATETIME cast to CHAR) · end_time is always null here (active only)
+   latitude/longitude are DECIMAL strings (DECIMAL(9,6)); all three GPS fields are null until a ping is sent
+   a missing driver row also returns { trip: null } (NOT 404 — by design, documented here)
+401 missing/invalid token · 403 not a driver · 500
+
+## BusBuddy API Contract — v8 (2/10) — T10 assign student to trip
+
+Changed v8: entry 13 is now IMPLEMENTED (was "planned, do not call" since v4).
+
+13. POST /trips/{tripId}/students 🔒 admin
+Assigns a student to a trip (inserts a trip_students row). Ended trips allowed —
+no active-trip requirement (contract never had one).
+Body: { "studentId": number }
+201: { "message": "Student assigned to trip" }
+400 non-numeric tripId (entry 11 precedent) · missing/invalid studentId (entry 12 precedent)
+401 missing/invalid token
+403 not an admin · target user is not a student
+404 trip not found · student not found
+409 student already assigned (composite PK trip_id+student_id — dup = ER_DUP_ENTRY,
+    surfaced as 409, same as entry 12)
+
+## BusBuddy API Contract — v9 (3/10) — T11 driver trip history
+
+18. GET /driver/trips 🔒 driver
+The caller's OWN last 5 trips, newest first (ORDER BY start_time DESC, id DESC —
+the active trip counts toward the 5). Found via token userId → drivers.user_id,
+no URL id.
+200: { trips: [ { id, driver_id, start_time, end_time, created_at } ] }
+   times are UTC strings (CAST AS CHAR) · end_time = null means ACTIVE
+   { trips: [] } when no trips — or no driver row (documented, not 404, entry-17 precedent)
+401 missing/invalid token · 403 not a driver · 500

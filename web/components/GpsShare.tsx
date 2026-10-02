@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useAuth } from '@/lib/auth-context'; // ⚠️ use the SAME import path your /driver/home page uses
+import { useAuth } from '@/app/auth-context'; // ⚠️ use the SAME import path your /driver/home page uses
 import Button from '@/components/Button'; // ⚠️ match your existing component imports
 import ErrorMessage from '@/components/ErrorMessage';
 
