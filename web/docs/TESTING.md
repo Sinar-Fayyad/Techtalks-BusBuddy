@@ -148,18 +148,14 @@ Environment: Windows 10 · WAMP MySQL 8.0.18 port 3308 · Next.js dev :3000 · b
 
 **Tally: 34 ✅ (24 new + 10 regression) · 1 ❌ (W39) · 14 ⬜ not re-run this pass.**
 
-## Quick checks ✅ — executed 2026-10-04 (T14, see Sprint 3 block below)
+## Quick checks (T14) — ✅ executed 2026-10-04, see the Sprint 3 T14 block below
 
 ## Known issues → next sprint
 
 1. ~~Admin login → /admin/home → 404 (W39 ❌)~~ ✅ FIXED (T5) — /admin/home renders in real Chrome, confirmed 2026-10-04 during T14
-2. Endpoint 13 (POST /trips/{id}/students) contract-planned, NOT built — student-trip linking via direct trip_students SQL only. Don't call it.
-3. Mobile M1–M6 not re-run this pass (no device); mobile still has no driver-status/trip screens
+2. ~~Endpoint 13 (POST /trips/{id}/students) contract-planned, NOT built — student-trip linking via direct trip_students SQL only~~ ✅ IMPLEMENTED (T10, 02/10) — admin API only, no UI yet; students linked via API/seed
+3. ~~Mobile M1–M6 not re-run this pass (no device); mobile still has no driver-status/trip screens~~ ✅ M1–M6 6/6 (T15, real device) · T13 added DriverTripScreen — mobile GPS sharing still missing (Sprint 4)
 4. ~~Seed "full reset" recipe documented but not executed end-to-end after edit~~ ✅ executed end-to-end 2026-10-04 (T14 Q5)
-
----
-
-Testers: Sprint 0 + Sprint 1 — Sinar · Sprint 2 — Wassim
 
 ## Sprint 3 — T14 pending quick-checks (2026-10-04) — 5/5 ✅
 
@@ -174,7 +170,38 @@ Environment: Windows · WAMP MySQL 3306 · BusBuddy_app · web dev :3000 · bran
 | Q5 | Full seed reset end-to-end | phpMyAdmin SQL: DELETE trip_students; trips; seed users → Import seed.sql | 5 users, 1 link, exactly 1 active trip, UTC times | ✅ users ids 15–19 (driver1 verified+PNG, driver2 pending+PDF), 1 link (parent 19 → student 18), trip id 10 end_time NULL, start 18:31 UTC = 21:31 local (UTC+3) |
 
 Notes / gotchas:
+
 - PowerShell `[IO.File]::WriteAllBytes` ignores the shell's current folder — always pass the FULL absolute path (it wrote to C:\WINDOWS\system32 silently otherwise).
 - Seed reset CHANGES user ids (now 15–19) — re-check ids before any hardcoded-id debugging.
 - Bonus observation: admin login → /admin/home renders correctly (W39 fix confirmed in real Chrome).
 - License-file recipes (for any machine): PNG = PowerShell base64 one-liner (bytes in T14 PR description) · PDF = Chrome Ctrl+P → Save as PDF → rename to seed-driver2-license.pdf.
+
+## Sprint 3 — T15 integration pass (2026-10-04) — W40 + mobile
+
+Environment: Windows · WAMP MySQL 3306 · BusBuddy_app · web dev :3000 · branch feature/t15-integration-and-report (incl. merged T13/T14). Seed reset run first (T14 recipe). Tools: Chrome ×2 (driver/student tabs), DevTools Network, phpMyAdmin SQL, Expo Go on physical device.
+
+### W40 — E2E live-map flow (driver shares → student sees → stop ends)
+
+| # | Test | Steps | Expected | Result |
+|---|------|-------|----------|--------|
+| W40a | Student baseline | student1 → /student/home with seeded active trip | "Trip in progress" + Live location card | ✅ |
+| W40b | Driver starts + shares | /driver/home → Start Trip → allow location | 409 on seeded trip → resync → Stop button; GpsShare pings | ✅ |
+| W40c | Pings every ~10s | DevTools Network on driver tab | POST /driver/trips/location 200, ~1/10s, initiator GpsShare.tsx | ✅ |
+| W40d | Student marker moves | watch student tab ~10s | bus marker + "Updated Xs ago" ticker | ⚠️ marker appeared only AFTER manual student refresh; see finding F1 |
+| W40e | Stop ends sharing | driver → Stop Trip | student map card disappears within ~10s | ✅ |
+| W40f | DB truth | SELECT id, latitude, longitude, location_updated_at, end_time FROM trips ORDER BY id DESC | GPS verified on watched trip: coords + location_updated_at set while active (end_time NULL); end_time filled after stop | ✅ (watched trip: 33.667694 / 35.671859) |
+
+Findings:
+
+- F1: student tab open BEFORE trip start misses the transition — polling only runs while an active trip is already on screen (T12 design); one manual refresh recovers. Owner: T12. Not fixed in T15.
+- F2 (pre-existing, confirmed live): /driver/home on fresh refresh shows ▶ Start even though the seeded trip is active (T9b-page gap) — Start then 409s and resyncs. Owner: T9. Not fixed in T15.
+
+### Mobile regression — M1–M6 on physical device (Expo Go) — 6/6 ✅
+
+M1 login shows the NEW T13 driver screen (Start/Stop) — expected change from T13, not a failure. M2 session survives kill+reopen ✅ · M3 wrong password error, no crash ✅ · M4 student1 login renders HomeScreen ✅ · M5 "Create an account" opens RegisterScreen ✅ · M6 register-on-phone → admin verifies on web → driver login on phone ✅.
+
+**T15 tally: W40 5/6 ✅ + 1 ⚠️ (F1) · M1–M6 6/6 ✅ · 2 pre-existing findings logged (F1, F2), not fixed here.**
+
+---
+
+Testers: Sprint 0 + Sprint 1 — Sinar · Sprint 2 — Wassim · Sprint 3 — Sinar
