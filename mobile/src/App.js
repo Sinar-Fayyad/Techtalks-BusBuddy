@@ -4,6 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import HomeScreen from './screens/HomeScreen';
+import DriverTripScreen from './screens/DriverTripScreen';
 
 export default function App() {
   const [loading, setLoading] = useState(true);
@@ -40,6 +41,15 @@ export default function App() {
   }
 
   if (session) {
+    if (session.role === 'driver') {
+      return (
+        <DriverTripScreen
+          token={session.token}
+          onSessionExpired={handleLogout}
+          onLogout={handleLogout}
+        />
+      );
+    }
     return <HomeScreen role={session.role} onLogout={handleLogout} />;
   }
 
