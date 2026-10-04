@@ -137,3 +137,18 @@ no URL id.
    times are UTC strings (CAST AS CHAR) · end_time = null means ACTIVE
    { trips: [] } when no trips — or no driver row (documented, not 404, entry-17 precedent)
 401 missing/invalid token · 403 not a driver · 500
+
+## BusBuddy API Contract — v10 (04/10) — Signup admin-block
+
+Changed v10: entry 1 signup NO LONGER accepts role "admin".
+
+1. POST /auth/signup
+Body: { name, email, password, role? "driver"|"student"|"parent" } — role defaults to driver
+(unknown/omitted role still defaults to driver, v4 behavior preserved).
+201: { message, userId }
+400 missing name/email/password
+403 role "admin" — rejected BEFORE any DB write: an admin account can never be
+    created via signup (admins exist only via database/seed.sql)
+409 email already registered · 500
+DB: NO schema change — users.role already contains all four roles; the admin
+block is enforced in application code only.
