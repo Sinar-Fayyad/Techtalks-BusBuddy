@@ -20,7 +20,7 @@ export default function GetStartedPage() {
       <section className={styles.cards}>
         <article className={styles.card}>
           <div className={styles.cardIcon}>
-             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="12" r="7" />
               <path d="M8.5 12l3.5 2.5L15 9.5" />
               <circle cx="15.5" cy="14.5" r="1.6" fill="currentColor" stroke="none" />
