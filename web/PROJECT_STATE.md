@@ -69,3 +69,20 @@ Format (the end-of-task prompt already generates this — just paste it):
 - Files added/changed
 - Tested: success + error cases
 - Gotchas for others (or "none")
+
+## 2026-10-04 — S4-T1 signup admin-block — done
+
+- POST /auth/signup now rejects role="admin" with 403 BEFORE any DB write (only driver/student/parent are self-creatable; admins exist only via seed.sql). Unknown/omitted role still defaults to driver.
+- web/docs/API_CONTRACT.md bumped to v10 with the new entry 1 rules (400 missing fields, 403 admin, 409 dup, 201, 500). web/database/schema.sql change-log entry added 2026-10-04 noting NO schema change.
+- Commit: 68349e7 "S4-T1: block admin creation via signup (403), contract v10".
+- Tested: curl student→201, parent→201, admin→403, duplicate email→409, missing fields→400; DB confirmed 0 rows for the admin attempt; test users deleted afterwards.
+
+
+## 2026-10-04 — S4-T2 welcome page — done
+
+- Added a full welcome/onboarding page (`web/app/page.tsx` + `web/app/page.module.css`) built to Dana's mobile mockup: vibrant cyan→magenta/purple gradient bg, brand icon, "Safe Rides. Connected Families." tagline, three feature columns (Drivers / Students / Parents), illustrated bus scene with glowing road + floating "Bus 12: On time • 2 min away" notification, and the rounded cyan→magenta gradient "Get Started →" pill with a transparent "Log in" link under it.
+- Added role chooser page (`web/app/get-started/page.tsx` + `web/app/get-started/page.module.css`): Driver / Student / Parent cards; nav links to /login.
+- No API calls on either page. CSS variables only (--bb-bg-gradient, --navy, --amber, --text-muted, --bb-link, --grey), no inline styles.
+- Commit: 2d3e82f "S4-T2: welcome onboarding page + role chooser".
+- Tested: home /get-started both return 200; HTML contains "Get Started →", transparent "Log in" link to /login, all three role cards, 0 leftover inline style= attributes.
+
