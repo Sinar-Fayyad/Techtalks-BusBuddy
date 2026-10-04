@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import "leaflet/dist/leaflet.css";
+// import "leaflet/dist/leaflet.css"; // This page is not available yet what is his role for now ?
 import { AuthProvider } from "./auth-context";
 
 
