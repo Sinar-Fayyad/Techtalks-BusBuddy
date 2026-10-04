@@ -18,7 +18,7 @@ export default function GetStartedPage() {
       </div>
 
       <section className={styles.cards}>
-        <article className={styles.card}>
+        <Link className={styles.card} href="/driver/register">
           <div className={styles.cardIcon}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="12" r="7" />
@@ -28,9 +28,9 @@ export default function GetStartedPage() {
           </div>
           <h2 className={styles.cardName}>Driver</h2>
           <p className={styles.cardHint}>Pick up students, start/stop trips, share GPS</p>
-        </article>
+        </Link>
 
-        <article className={styles.card}>
+        <Link className={styles.card} href="/student/home">
           <div className={styles.cardIcon}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="9" cy="8" r="3" />
@@ -41,9 +41,9 @@ export default function GetStartedPage() {
           </div>
           <h2 className={styles.cardName}>Student</h2>
           <p className={styles.cardHint}>Join an active trip, watch the live map</p>
-        </article>
+        </Link>
 
-        <article className={styles.card}>
+        <Link className={styles.card} href="/parent/home">
           <div className={styles.cardIcon}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 22s8-6 8-11a8 8 0 1 0-16 0c0 5 8 11 8 11z" />
@@ -54,7 +54,7 @@ export default function GetStartedPage() {
           </div>
           <h2 className={styles.cardName}>Parent</h2>
           <p className={styles.cardHint}>Link your children, track their trips</p>
-        </article>
+        </Link>
       </section>
 
       <div className={styles.nav}>
