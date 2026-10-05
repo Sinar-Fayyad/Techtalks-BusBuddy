@@ -83,6 +83,15 @@ Format (the end-of-task prompt already generates this — just paste it):
 - Added a full welcome/onboarding page (`web/app/page.tsx` + `web/app/page.module.css`) built to Dana's mobile mockup: vibrant cyan→magenta/purple gradient bg, brand icon, "Safe Rides. Connected Families." tagline, three feature columns (Drivers / Students / Parents), illustrated bus scene with glowing road + floating "Bus 12: On time • 2 min away" notification, and the rounded cyan→magenta gradient "Get Started →" pill with a transparent "Log in" link under it.
 - Added role chooser page (`web/app/get-started/page.tsx` + `web/app/get-started/page.module.css`): Driver / Student / Parent cards; nav links to /login.
 - No API calls on either page. CSS variables only (--bb-bg-gradient, --navy, --amber, --text-muted, --bb-link, --grey), no inline styles.
-- Commit: 2d3e82f "S4-T2: welcome onboarding page + role chooser".
+- Commit: 31111bd "S4-T2: welcome page (modern mockup) + role chooser (navy bg, transparent login)".
 - Tested: home /get-started both return 200; HTML contains "Get Started →", transparent "Log in" link to /login, all three role cards, 0 leftover inline style= attributes.
+
+
+## 2026-10-05 — S4-T2 welcome background image + role page bg match — done
+
+- Updated image: copied the user's uploaded `busbuddy-illustration.jpg` into `web/public/busbuddy-illustration.jpg` (committed as a new public asset) and switched the welcome page (`web/app/page.module.css` `.wrap`) background from the flat cyan→magenta gradient to `background-image: url('../public/busbuddy-illustration.jpg'); background-size: cover; background-position: center;`. Everything else (geometry, text, single "Get Started →" button, three feature columns, transparent login line, vertical stack) unchanged.
+- Role page background fix: `web/app/get-started/page.module.css` `.chooser` background changed from `var(--navy)` to `var(--bb-bg-gradient)` — the same gradient as Login and the rest of the app (the login-page gradient), no longer navy. Card text and the navy nav button intentionally kept as-is.
+- Path fix: an initial commit used `url('../../public/...')` which Next.js could not resolve; corrected to `url('../public/...')` and re-pushed.
+- Commit: 5653cd3 "S4-T2: welcome background image + role page background matching other pages".
+- Tested: all 6 routes (/, /get-started, /driver/register, /student/home, /parent/home, /login) return HTTP 200; served CSS confirms the image url on the welcome page and the gradient on the role chooser.
 
