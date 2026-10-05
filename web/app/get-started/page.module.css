@@ -10,7 +10,7 @@
   align-items: center;
   justify-content: center;
   padding: 2rem 1.5rem;
-  background: var(--navy);
+  background: var(--bb-bg-gradient);
   color: #ffffff;
 }
 
