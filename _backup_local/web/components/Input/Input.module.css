@@ -1,0 +1,6 @@
+.wrap { display: flex; flex-direction: column; gap: 4px; }
+.label { font-weight: 600; font-size: 14px; }
+.input { padding: 10px; border: 1px solid var(--grey); border-radius: 6px; font-size: 15px; }
+.input:focus { outline: 2px solid var(--amber); }
+.error { border-color: var(--danger); }
+.errorText { color: var(--danger); font-size: 13px; margin: 0; }

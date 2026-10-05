@@ -1,0 +1,54 @@
+@baseUrl = http://localhost:3000
+
+### 0. Create admin (once; 409 = already exists)
+POST {{baseUrl}}/api/auth/signup
+Content-Type: application/json
+
+{ "name": "Test Admin", "email": "admin@test.com", "password": "Passw0rd!", "role": "admin" }
+
+### 1. Admin login (captures token for later tests)
+# @name adminLogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "admin@test.com", "password": "Passw0rd!" }
+
+### 2. Driver login (driver account was made via /driver/register page)
+# @name driverLogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "driver@test.com", "password": "Passw0rd!" }
+
+### 3. No token -> 401
+GET {{baseUrl}}/api/driver/license/whatever.jpg
+
+### 4. Garbage token -> 401
+GET {{baseUrl}}/api/driver/license/whatever.jpg
+Authorization: Bearer garbage
+
+### 5. Driver token -> 403  (THE T3 TEST)
+GET {{baseUrl}}/api/driver/license/whatever.jpg
+Authorization: Bearer {{driverLogin.response.body.token}}
+
+### 6. Admin + missing file -> 404
+GET {{baseUrl}}/api/driver/license/whatever.jpg
+Authorization: Bearer {{adminLogin.response.body.token}}
+
+### 7. Admin + path traversal -> 400
+GET {{baseUrl}}/api/driver/license/..%2Fsecret
+Authorization: Bearer {{adminLogin.response.body.token}}
+
+### 8. Driver + path traversal -> 403 (role gate runs before path check)
+GET {{baseUrl}}/api/driver/license/..%2Fsecret
+Authorization: Bearer {{driverLogin.response.body.token}}
+
+### 9. Admin + REAL file -> 200
+GET {{baseUrl}}/api/driver/license//5-62b19987ece86639.pdf
+Authorization: Bearer {{adminLogin.response.body.token}}
+
+### 10. Admin via ?token= param -> 200 (regression: admin page link)
+GET {{baseUrl}}/api/driver/license//5-62b19987ece86639.pdf?token={{adminLogin.response.body.token}}
+
+### 11. Driver via ?token= param -> 403
+GET {{baseUrl}}/api/driver/license//5-62b19987ece86639.pdf?token={{driverLogin.response.body.token}}

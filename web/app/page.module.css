@@ -8,10 +8,14 @@
 .wrap {
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 1.5rem;
   padding: 2rem 1.5rem;
-  background: linear-gradient(160deg, #08d9d6 0%, #243bdb 45%, #b000ff 100%);
+  background-image: url('../public/busbuddy-illustration.jpg');
+  background-size: cover;
+  background-position: center;
   position: relative;
   overflow: hidden;
 }
@@ -94,7 +98,7 @@
 .featureIcon {
   width: 60px;
   height: 60px;
-   border-radius: 50%;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -152,138 +156,3 @@
 .getStarted:active {
   transform: translateY(0);
 }
-
-.loginWrap {
-  margin-top: 0.6rem;
-}
-
-.login {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0;
-  border: none;
-  border-radius: 999px;
-  background: transparent;
-  color: #08d9d6;
-  font-weight: 700;
-  font-size: 0.95rem;
-  cursor: pointer;
-   text-decoration: none;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.login:hover {
-  background: rgba(8, 217, 214, 0.12);
-  color: #ffffff;
-}
-
-.loginText {
-  color: rgba(255, 255, 255, 0.75);
-  font-weight: 600;
-  font-size: 0.85rem;
-}
-
-/* ---------- Role chooser page ---------- */
-
-.chooser {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem 1.5rem;
-  background: var(--grey);
-}
-
-.chooserTop {
-  text-align: center;
-  max-width: 520px;
-  margin-bottom: 2rem;
-}
-
-.chooserTop .brandIcon {
-  width: 64px;
-  height: 64px;
-  margin: 0 auto 0.8rem;
-}
-
-.chooserTop .title {
-  font-size: 1.8rem;
-}
-
-.chooserTop .tagline {
-  font-size: 0.9rem;
-}
-
-.cards {
-    display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  width: 100%;
-  max-width: 720px;
-}
-
-.card {
-  background: #ffffff;
-  border: 1px solid var(--grey);
-  border-radius: 14px;
-  padding: 1.2rem 1rem 1rem;
-  text-align: center;
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
-}
-
-.card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
-  border-color: var(--amber);
-}
-
-.cardIcon {
-    width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #ffffff;
-  margin: 0 auto 0.7rem;
-}
-
-.cardIcon svg { width: 24px; height: 24px; }
-
-.cardName {
-  color: var(--navy);
-  font-weight: 800;
-  font-size: 1.05rem;
-  margin: 0;
-}
-
-.cardHint {
-  color: var(--text-muted);
-  font-size: 0.8rem;
-  margin: 0.3rem 0 0;
-}
-
-.nav {
-  margin-top: 2rem;
-  width: 100%;
-  max-width: 460px;
-  display: flex;
-  justify-content: center;
-}
-
-.navLink {
-  padding: 10px 22px;
-  border: none;
-  border-radius: 999px;
-  background: var(--navy);
-  color: #ffffff;
-  font-weight: 700;
-  cursor: pointer;
-  text-decoration: none;
-  transition: opacity 0.15s ease;
-}
-
-.navLink:hover { opacity: 0.85; }

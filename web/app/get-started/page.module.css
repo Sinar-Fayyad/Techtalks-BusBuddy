@@ -1,5 +1,6 @@
 /* BusBuddy — get-started (role chooser) page styles
-   CSS variables only. Polished, on-brand, no inline styles.
+   CSS variables only. Background matches the rest of the app (navy block) so it
+   sits on the same visual form as every other page.
 */
 
 .chooser {
@@ -9,7 +10,8 @@
   align-items: center;
   justify-content: center;
   padding: 2rem 1.5rem;
-  background: var(--grey);
+  background: var(--bb-bg-gradient);
+  color: #ffffff;
 }
 
 .chooserTop {
@@ -21,18 +23,27 @@
 .chooserTop .brandIcon {
   width: 64px;
   height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #08d9d6, #243bdb 50%, #b000ff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  box-shadow: 0 8px 24px rgba(8, 217, 214, 0.45);
   margin: 0 auto 0.8rem;
 }
+
+.chooserTop .brandIcon svg { width: 34px; height: 34px; }
 
 .chooserTop .title {
   font-size: 1.8rem;
   font-weight: 800;
-  color: var(--navy);
+  color: #ffffff;
   margin: 0 0 0.3rem;
 }
 
 .chooserTop .tagline {
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.75);
   font-size: 0.9rem;
   margin: 0;
 }
@@ -49,8 +60,9 @@
   background: #ffffff;
   border: 1px solid var(--grey);
   border-radius: 14px;
-   padding: 1.2rem 1rem 1rem;
+  padding: 1.2rem 1rem 1rem;
   text-align: center;
+  color: var(--navy);
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
@@ -68,7 +80,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
+  color: var(--navy);
   margin: 0 auto 0.7rem;
 }
 
@@ -96,7 +108,7 @@
 }
 
 .navLink {
-    padding: 10px 22px;
+  padding: 10px 22px;
   border: none;
   border-radius: 999px;
   background: var(--navy);

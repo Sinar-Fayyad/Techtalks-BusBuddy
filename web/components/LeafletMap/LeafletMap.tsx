@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import L from 'leaflet';
+// import L from 'leaflet';  // Page is still unavailable
 import styles from './LeafletMap.module.css';
 
 export type LeafletMapProps = {
