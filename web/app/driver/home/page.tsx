@@ -52,26 +52,26 @@ export default function DriverHomePage() {
     })();
   }, [ready, token, role, logout]);
 
-  // --- TRIP HISTORY (T11): own last 5 trips; refetches after Start/Stop
-  //     because onTrip is a dependency. Cancelled flag guards StrictMode. ---
+  // --- ACTIVE TRIP (T9b): fetch on mount so a trip started in another tab is never stale.
+  //     onTrip is derived from the backend truth, not local state. Cancelled flag guards StrictMode. ---
   useEffect(() => {
     if (!ready || !token || role !== 'driver') return;
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/api/driver/trips', {
+        const res = await fetch('/api/driver/trips/active', {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.status === 401) { logout(); return; }
         if (!res.ok || cancelled) return;
         const data = await res.json();
-        if (!cancelled) setTripHistory(data.trips ?? []);
-      } catch (e) {
-        console.error('Trip history load failed', e); // non-critical: card keeps last data
+        if (!cancelled) setOnTrip(!!data.trip);
+      } catch {
+        // non-critical: page keeps the last-known onTrip state
       }
     })();
     return () => { cancelled = true; };
-  }, [ready, token, role, logout, onTrip]);
+  }, [ready, token, role, logout]);
 
   // --- START: endpoint 9. 409 = already on a trip → friendly + flip to Stop ---
   const startTrip = async () => {

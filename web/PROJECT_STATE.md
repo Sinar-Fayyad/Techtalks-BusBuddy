@@ -95,3 +95,11 @@ Format (the end-of-task prompt already generates this — just paste it):
 - Commit: 5653cd3 "S4-T2: welcome background image + role page background matching other pages".
 - Tested: all 6 routes (/, /get-started, /driver/register, /student/home, /parent/home, /login) return HTTP 200; served CSS confirms the image url on the welcome page and the gradient on the role chooser.
 
+
+## 2026-10-05 — S4-T3 T9b driver home refresh state — done
+
+- Fixed stale Start-button after refresh on `/driver/home`: on mount the page now fetches `GET /api/driver/trips/active` and derives `onTrip = !!data.trip` from backend truth instead of relying on local state.
+- Stop shows immediately on refresh for an active trip; after a stop in another tab, Start shows again. Normal start/stop and `GpsShare`-gating unchanged.
+- Commit: 7e78f32 "S4-T3: T9b fix — driver home refresh shows correct Start/Stop state".
+- Tested: route registered in app-path-routes-manifest; `tsc --noEmit` clean for the changed file; dev server on :51840 returns HTTP 200 for all 6 routes; served CSS confirms the image url on welcome page and the gradient on the role chooser. Live in-browser session test (db seed + trip) not runnable from this machine — reported as limitation.
+
