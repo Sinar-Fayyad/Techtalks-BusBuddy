@@ -80,13 +80,15 @@ export default function StudentHomePage() {
     loadTrip();
   }, [ready, token, role, loadTrip]);
 
-  // --- T12 POLLING: interval exists ONLY while an active trip is loaded.
-  //     Trip ends → last poll returns end_time → activeTrip flips false →
-  //     cleanup clears the interval. Unmount → same cleanup. No zombies. ---
+  // --- T7/F1 POLLING: interval ALWAYS runs once the student session is live.
+  //     No active trip → slow 30s poll (a new trip is detected without refresh).
+  //     Active trip → fast 10s poll (live map).
+  //     activeTrip flips → effect re-runs: cleanup clears the old interval, so
+  //     exactly ONE interval ever exists (no overlaps). Unmount → same cleanup.
+  //     Trip ends → activeTrip false → 10s interval destroyed, 30s resumes (no zombies). ---
   useEffect(() => {
     if (!ready || !token || role !== 'student') return;
-  if (!activeTrip) return; // ended / no trip → NO interval at all
-    const id = setInterval(() => { void loadTrip(true); }, 10_000);
+    const id = setInterval(() => { void loadTrip(true); }, activeTrip ? 10_000 : 30_000);
     return () => clearInterval(id);
   }, [ready, token, role, loadTrip, activeTrip]);
 
@@ -188,7 +190,7 @@ export default function StudentHomePage() {
             }}>
               No trip scheduled
             </span>
-            <p style={{ margin: '0.9rem 0 0 0', color: 'var(--bb-text-dim)' }}>
+            <p style={{ margin: '0.9rem 0 0', color: 'var(--bb-text-dim)' }}>
               You don&apos;t have a trip assigned right now.
             </p>
           </section>
