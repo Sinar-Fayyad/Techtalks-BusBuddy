@@ -1,5 +1,3 @@
-<!-- markdownlint-disable MD029 -->
-
 # BusBuddy API Contract — v2 (18/09)
 
 Base URL: `http://localhost:3000/api` — all bodies JSON.
@@ -68,6 +66,9 @@ Body: { "studentId": number }
 Errors: 400 invalid studentId · 401 no/invalid token · 403 not a parent / target user is not a student · 404 student not found · 409 link already exists · 500
 DB: parent_student (composite PK parent_user_id+student_user_id — duplicate = 1062, surfaced as 409).
 
+Planned (designed, NOT yet implemented — do not call):
+13. POST /trips/{tripId}/students 🔒 admin — assign a student to a trip. Body { "studentId" } · 201 · 401/403/404/409.
+
 ## BusBuddy API Contract — v5 (24/09) — T10 parent + T11 student trip status
 
 14. GET /students/{studentId}/trip-status 🔒 student (own) / parent (linked child) / admin (any)
@@ -99,8 +100,7 @@ Body: { "latitude": number, "longitude": number }
 403 not a driver · driver not verified
 404 no driver profile · 409 no active trip
 Note: DECIMAL(9,6) — extra decimal precision is rounded by MySQL.
-
-## BusBuddy API Contract — v7 (2026-10-01) — T9 driver active-trip lookup
+## BusBuddy API Contract — v7 (10/1/2026) — T9 driver active-trip lookup
 
 17. GET /driver/trips/active 🔒 driver
 The caller's own active trip, or { "trip": null } when none (200 in both cases).
@@ -110,7 +110,6 @@ No URL id — driver found from the token userId → drivers.user_id.
    latitude/longitude are DECIMAL strings (DECIMAL(9,6)); all three GPS fields are null until a ping is sent
    a missing driver row also returns { trip: null } (NOT 404 — by design, documented here)
 401 missing/invalid token · 403 not a driver · 500
-
 ## BusBuddy API Contract — v8 (2/10) — T10 assign student to trip
 
 Changed v8: entry 13 is now IMPLEMENTED (was "planned, do not call" since v4).
@@ -152,3 +151,19 @@ Body: { name, email, password, role? "driver"|"student"|"parent" } — role defa
 409 email already registered · 500
 DB: NO schema change — users.role already contains all four roles; the admin
 block is enforced in application code only.
+
+
+## BusBuddy API Contract — v11 (07/10) — T8 link child by email
+
+Changed v11: entry 12 (POST /parents/me/children) body accepts EITHER form — exactly one:
+  { "studentId": number }                    (unchanged, byte-identical to v10)
+  { "email": "child@busbuddy.test" }         (new)
+Sending both, or neither → 400.
+email mode: resolves the child's users row by email first (case-insensitive, MySQL _ci),
+then the exact same checks as studentId mode:
+  404 no account with that email · 403 account exists but role ≠ student · 409 already linked.
+All other responses unchanged: 201 { "message": "Child linked" } · 400 · 401 · 403 · 404 · 409 · 500.
+No new endpoint numbers — entry #12 gains the alternate body key only.
+UI producers / consumers of email mode: /parent/register (optional field), /parent/home (Add-child card).
+
+1a. (carried from v10, unchanged) POST /auth/signup role="admin" → 403; self-signable roles: driver | student | parent.
