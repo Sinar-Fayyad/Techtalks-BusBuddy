@@ -114,3 +114,29 @@ Added: nothing new. Changed: web/app/student/home/page.tsx — the only file edi
 New/changed: no endpoints, no components, no DB tables, no schema/contract. Entry 14 (GET /students/{id}/trip-status) reused.
 Tested: only the file-edit was confirmed (compile/no errors, effect semantics reviewed). Failure: all functional test attempts (Tabs A/B + phpMyAdmin wiring) hit a non-existent blocker — the POST /api/auth/login route returned HTTP 401 {"error":"Invalid credentials"} for three known-good bcrypt hashes ($2y$10$EixZaYVK... for busbuddy123, same vector, fresh row), while the request body and DB row were confirmed byte-exact. During this loop, no F1 criteria were executed or verified (no 30s polling rhythm, no trip-detection flip, no cleanup checks). This is a T7 blocking issue, handed to the team lead.
 Gotchas: F1's test required a driver login to create a trip; the login API in this running environment returned 401 for exact, known-good credentials — root cause not yet diagnosed (session/auth path under review with the team lead). If re-tested, verify: (1) 30s polling with no trip in DevTools Network, (2) trip starts while open → "Trip in progress" + map appear without refresh, (3) 10s rhythm resumes, (4) 30s after trip end, (5) zero requests after logout.
+
+## 2026-10-8 — [jad kamal el dine] — T8 — done
+
+- Parent signup page (→ auto-login → /parent/home) + parent-child linking UI by email
+  via POST /parents/me/children (contract entry [NUMBER] — confirm in API_CONTRACT.md).
+  Linking skippable at signup; can also link later from /parent/home.
+- Files added/changed: [e.g. web/app/parent/register/page.tsx + .module.css,
+  web/app/parent/home/page.tsx (link form)] — list every path.
+- Contract: entry [NUMBER] POST /parents/me/children, version bumped v10 → v[?] in same commit [YES/NO].
+- Tested: signup→auto-login→home ✓ · link success (DB parent_child row + UI) ✓ ·
+  409 already linked ✓ · 404 email not found ✓ · 403 target not a student ✓ ·
+  skip-at-signup ✓ · link-later from /parent/home ✓ (all "✓" only if true — mark blocked cases honestly)
+- Commit: [hash] "T8: ..." · PR into dev: [open/merged]
+- Gotchas: [none / what surprised you]
+
+## 2026-10-8 — [jad kamal el dine ] — T9 — done
+
+- New Expo screen DriverStatusScreen: verified/pending/rejected badge (+ rejection
+  reason) and own license file via download-with-Bearer + Sharing; reachable from
+  driver home; any 401 → session cleared → Login.
+- Files added/changed: [real paths]
+- Endpoints: [entry numbers from contract] — no new endpoints, no DB/contract changes.
+- Tested: verified ✓ · pending ✓ · rejected ✓ · 401→session cleared ✓ ·
+  reachable from home ✓ · real-device Expo Go ✓ (mark honestly)
+- Commit: [hash] · PR into dev: [status]
+- Gotchas: [none / real ones — e.g. field name mismatches, Sharing behavior per OS]
