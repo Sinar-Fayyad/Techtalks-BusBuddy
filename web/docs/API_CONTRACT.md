@@ -152,6 +152,20 @@ Body: { name, email, password, role? "driver"|"student"|"parent" } — role defa
 DB: NO schema change — users.role already contains all four roles; the admin
 block is enforced in application code only.
 
+## BusBuddy API Contract — v10 (04/10) — Signup admin-block
+
+Changed v10: entry 1 signup NO LONGER accepts role "admin".
+
+1. POST /auth/signup
+Body: { name, email, password, role? "driver"|"student"|"parent" } — role defaults to driver
+(unknown/omitted role still defaults to driver, v4 behavior preserved).
+201: { message, userId }
+400 missing name/email/password
+403 role "admin" — rejected BEFORE any DB write: an admin account can never be
+    created via signup (admins exist only via database/seed.sql)
+409 email already registered · 500
+DB: NO schema change — users.role already contains all four roles; the admin
+block is enforced in application code only.
 
 ## BusBuddy API Contract — v11 (07/10) — T8 link child by email
 

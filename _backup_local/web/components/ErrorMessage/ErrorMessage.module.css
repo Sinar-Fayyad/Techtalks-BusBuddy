@@ -1,8 +1,0 @@
-.error {
-  color: var(--bb-error, var(--danger, #b00020));
-  background: var(--bb-card-bg, #fff);
-  border: 1px solid var(--bb-error, var(--danger, #b00020));
-  border-radius: 8px;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.95rem;
-}
