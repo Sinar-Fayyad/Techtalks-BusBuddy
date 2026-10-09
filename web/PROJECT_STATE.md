@@ -140,3 +140,37 @@ Gotchas: F1's test required a driver login to create a trip; the login API in th
   reachable from home ✓ · real-device Expo Go ✓ (mark honestly)
 - Commit: [hash] · PR into dev: [status]
 - Gotchas: [none / real ones — e.g. field name mismatches, Sharing behavior per OS]
+
+## 2026-10-09 — [jad kamal el dine] — T10 onboarding flow wiring
+
+- Onboarding flow wiring for T10: /get-started Student and Parent cards pointed at
+  /student/home and /parent/home, which bounced new visitors (no session) to /login
+  — a dead-end. Specified redirect to the existing signup pages
+  (/student/register, /parent/register); driver card was already correct.
+  Driver register discarded the login token (no session after registering) — fix
+  specified: auth-context login(token, role) + router.push('/driver/home'), plus
+  replacing hardcoded http://localhost:3000/api URLs with relative /api/... and
+  renaming the local `login` fetch variable to `loginRes` (clash with useAuth).
+- parent/home had a pre-existing build break: React hooks imported 3× (duplicate
+  useEffect/useState) — resolved to the single full react import.
+- Incidental, NOT T10 scope: components/LeafletMap/LeafletMap.tsx pre-existing
+  TS2686 (`L` UMD global) blocks project-wide `tsc --noEmit` — one-line
+  `import L from 'leaflet'` fix (+ @types/leaflet if missing). Map owner to review.
+- New/changed: endpoints NONE (reuses contract v11 entries 1, 2, 4, 7 — no bump) ·
+  DB/schema NONE · components NONE · files: web/app/get-started/page.tsx ·
+  web/app/driver/register/page.tsx · web/app/parent/home/page.tsx ·
+  web/components/LeafletMap/LeafletMap.tsx (incidental)
+- Tested: NOT VERIFIED at sprint end. Unconfirmed/unrun: the 3 browser happy paths
+  (driver/student/parent signup → correct role home → session survives refresh),
+  chooser cards reaching signup pages, error cases (empty form, invalid email,
+  duplicate email 409, admin-role 403 regression), DB role check. In-progress
+  build errors (duplicate imports, useCallback not defined) were shown by the dev
+  server and fixed by the student; a final clean `tsc --noEmit` was NOT confirmed.
+  Commit/push/PR: NOT confirmed — last observed git status had only 2 of 3 files
+  modified and nothing staged.
+- Commit: [hash or "none"] · PR into dev: [open/none]
+- Gotchas: when fixing duplicate react imports in parent/home, keep the FULL import
+  (useCallback+useEffect+useState+FormEvent) — deleting the wrong one swaps the
+  error to "useCallback is not defined". driver/register's local `login` fetch
+  variable collides with useAuth's `login`. LeafletMap's fix touches Sprint 3 map
+  code — coordinate with its owner before merging.

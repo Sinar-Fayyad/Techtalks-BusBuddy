@@ -1,10 +1,8 @@
 'use client';
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../auth-context';
 import Button from '@/components/Button';
 import ErrorMessage from '@/components/ErrorMessage';
-import { useEffect, useState } from 'react';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 interface Child { id: number; name: string; email: string; }
 interface TripInfo { id: number; driver_id: number; start_time: string; end_time: string | null; }
