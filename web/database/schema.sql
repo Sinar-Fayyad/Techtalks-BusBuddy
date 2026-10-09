@@ -108,6 +108,13 @@ CREATE TABLE trip_students (                     -- NEW TABLE
 -- re-runs stay idempotent and can never create a second active trip.
 -- Stopped the trip while testing? Just re-run seed.sql to get a fresh active one.
 --
+-- 2026-10-04 — Signup admin-block task — NO schema change
+-- users.role enum already contains 'admin','driver','student','parent' (added Sprint 2);
+-- the new rule (POST /auth/signup rejects role="admin" with 403 before any DB write)
+-- is enforced purely in application code: web/app/api/auth/signup/route.ts.
+-- Admin accounts can be created ONLY via database/seed.sql. Logged here so reviewers
+-- see the DB was considered and intentionally left untouched.
+--
 -- 2026-10-04 — S4-T1 — Signup admin-block (NO schema change)
 -- users.role enum already contains 'admin','driver','student','parent' (added Sprint 2);
 -- the new rule (POST /auth/signup rejects role="admin" with 403 before any DB write)
