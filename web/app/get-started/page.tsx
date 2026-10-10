@@ -1,11 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import ErrorMessage from '@/components/ErrorMessage';
 import styles from './page.module.css';
 
 export default function GetStartedPage() {
   return (
     <main className={styles.chooser}>
+      <ErrorMessage message={null} />
       <div className={styles.chooserTop}>
         <div className={styles.brandIcon}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

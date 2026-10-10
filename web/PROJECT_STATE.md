@@ -174,3 +174,11 @@ Gotchas: F1's test required a driver login to create a trip; the login API in th
   error to "useCallback is not defined". driver/register's local `login` fetch
   variable collides with useAuth's `login`. LeafletMap's fix touches Sprint 3 map
   code — coordinate with its owner before merging.
+
+  ## 2026-10-10 — [Sinar Fayyad] - S4-T13 Error component on new pages — done
+
+- Repo-wide audit: zero raw alert()/window.alert()/confirm() anywhere in web/; existing pages (student/home, parent/home, driver/register, login, admin/drivers) already use the shared ErrorMessage component with console.error kept in catch blocks.
+- Welcome (/) and role chooser (/get-started) have no async/error paths yet; wired the shared ErrorMessage (web/components/ErrorMessage) with an empty message state as the standard error slot, per user's explicit choice to add it now rather than wait.
+- Student/parent signup + link-child pages (T5/T6/T8 outputs) do not exist in the repo yet — ErrorMessage coverage on those pages is a follow-up once they merge.
+- Commit: 68ac652 "S4-T13: use shared ErrorMessage on welcome + chooser pages".
+- Tested: tsc --noEmit clean for changed files (only pre-existing LeafletMap TS2686 errors remain); dev server on :51841 returns HTTP 200 for / and /get-started; rendered HTML unchanged (Get Started button + role cards present, 0 alert elements).
