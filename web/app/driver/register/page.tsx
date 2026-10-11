@@ -1,12 +1,22 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth, isLoggedIn, ROLE_HOME } from '@/app/auth-context';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import ErrorMessage from '@/components/ErrorMessage'; // NEW — shared friendly error
-import { useRouter } from 'next/navigation';
-import { useAuth } from '../../auth-context';
 
 export default function DriverRegister() {
+  const router = useRouter();
+  const { token, role, ready } = useAuth();
+
+  // Logged-in guard: already authenticated users don't create a second account here.
+  useEffect(() => {
+    if (isLoggedIn({ token, role })) {
+      router.replace(ROLE_HOME[role!]);
+    }
+  }, [ready, token, role, router]);
+
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -16,8 +26,6 @@ export default function DriverRegister() {
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
-const { login } = useAuth();
 
   const set = (k: string) => (e: any) =>
     setForm({ ...form, [k]: e.target.type === 'file' ? e.target.files?.[0] ?? null : e.target.value });
@@ -34,7 +42,7 @@ const { login } = useAuth();
     setLoading(true);
     try {
       // 1. Signup
-      const res = await fetch('/api/auth/signup', {
+      const res = await fetch('http://localhost:3000/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -47,18 +55,18 @@ const { login } = useAuth();
       if (!res.ok) { setError(data.error ?? 'Signup failed'); return; }
 
       // 2. Login (get token)
-      const loginRes = await fetch('/api/auth/login', {
+      const login = await fetch('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: form.email, password: form.password }),
       });
-      const ld = await loginRes.json();
-      if (!loginRes.ok) { setError(ld.error ?? 'Login failed'); return; }
+      const ld = await login.json();
+      if (!login.ok) { setError(ld.error ?? 'Login failed'); return; }
 
       // 3. Upload license file
       const fd = new FormData();
       fd.append('file', form.license_file);
-      const up = await fetch('/api/driver/license', {
+      const up = await fetch('http://localhost:3000/api/driver/license', {
         method: 'POST',
         headers: { Authorization: `Bearer ${ld.token}` },
         body: fd,
@@ -67,7 +75,7 @@ const { login } = useAuth();
       if (!up.ok) { setError(ud.error ?? 'Upload failed'); return; }
 
       // 4. Create driver profile with stored file path
-      const prof = await fetch('/api/driver/profile', {
+      const prof = await fetch('http://localhost:3000/api/driver/profile', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -80,6 +88,9 @@ const { login } = useAuth();
 
       setMsg('Registered! Your profile is pending admin review ✅');
       setForm({ name: '', email: '', password: '', license_file: null });
+      // Close out the one-shot registration from browser history so Back doesn't
+      // revisit it, and leave the user on a sensible place (Back-button polish).
+      router.replace('/login');
     } catch (err) { // CHANGED — add err param
       console.error('Registration failed:', err); // CHANGED — console.error per convention
       setError('Server error — is the dev server running?');

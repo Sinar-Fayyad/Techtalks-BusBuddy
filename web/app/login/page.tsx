@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { useState, type ChangeEvent, type FormEvent, useEffect } from 'react';
 import styles from './page.module.css';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../auth-context';
+import { useAuth, ROLE_HOME, isLoggedIn } from '@/app/auth-context';
 import ErrorMessage from '@/components/ErrorMessage'; // NEW — shared friendly error
 
 export default function LoginPage() {
@@ -14,7 +14,15 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const router = useRouter();
-  const { login } = useAuth();
+  const { token, role, ready, login } = useAuth();
+
+  // Logged-in guard: if the session is already authenticated, route to the
+  // role home instead of showing the login form / trapping Back.
+  useEffect(() => {
+    if (isLoggedIn({ token, role })) {
+      router.replace(ROLE_HOME[role!]);
+    }
+  }, [ready, token, role, router]);
 
 
   const set = (key: 'email' | 'password') => (e: ChangeEvent<HTMLInputElement>) =>
@@ -63,17 +71,10 @@ const submit = async (e: FormEvent<HTMLFormElement>) => {
     }
 
            login(data.token, data.role);
-    setMsg(`Login successful as ${data.role}. ✅`);
-
- if (data.role === 'admin') {
-      router.push('/admin/home');
-    } else if (data.role === 'driver') {
-      router.push('/driver/home');
-    } else if (data.role === 'student') {
-      router.push('/student/home');
-    } else if (data.role === 'parent') {
-      router.push('/parent/home');
-    }
+    setMsg(`Login successful as ${data.role}. ✅`);    // Clear the one-shot login from browser history so the Back button never
+    // lands a logged-in user back on /login (Back-button polish).
+    router.replace('/');
+    router.replace(ROLE_HOME[data.role as "admin" | "driver" | "student" | "parent"]);
     
 
 

@@ -16,6 +16,17 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
+export const ROLE_HOME: Record<Role, string> = {
+  admin: '/admin/home',
+  driver: '/driver/home',
+  student: '/student/home',
+  parent: '/parent/home',
+};
+
+export function isLoggedIn(scope: Pick<AuthState, "token" | "role">): boolean {
+  return scope.token !== null && scope.role !== null;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [role, setRole] = useState<Role | null>(null);
