@@ -202,6 +202,70 @@ M1 login shows the NEW T13 driver screen (Start/Stop) — expected change from T
 
 **T15 tally: W40 5/6 ✅ + 1 ⚠️ (F1) · M1–M6 6/6 ✅ · 2 pre-existing findings logged (F1, F2), not fixed here.**
 
+## Sprint 4 — T15 test pass (2026-10-11) — W41–W45
+
+Environment: Windows · WAMP MySQL busbuddy_app (port 3308 per .env.local, root/no password) · web dev on :51841 (reused the already-running dev server; :3000 was free) · branch `S4-T15-testing-docs` (off dev @ 4dab16c). Fresh seed reset first (T14 recipe). Tools: curl (fresh Bearer per request) · Chrome + DevTools (UI) · mysql CLI (DB truth). Contract v11 — no API/schema change in this task (docs-only).
+
+### W41 — Signup role matrix, incl. admin rejection (contract v11 entry 1)
+
+| # | Test | Steps | Expected | Result |
+|---|------|-------|----------|--------|
+| W41a | Signup student | POST /auth/signup role=student | 201, role=student row in users | ✅ 201 userId=14, DB role=student |
+| W41b | Signup parent | role=parent | 201, role=parent row | ✅ 201 userId=15, DB role=parent |
+| W41c | Signup driver (default) | role omitted | 201, role=driver row | ✅ 201 explicit=userId16 + omitted=userId18, both DB role=driver |
+| W41d | Signup admin REJECTED | role=admin | 403, 0 rows written (DB check) | ✅ 403 `Admin accounts cannot be created via signup`, DB rows=0 |
+| W41e | Unknown role | role=banana | defaults to driver (carried from v4) | ✅ 201 userId=17, DB role=driver |
+| W41f | Duplicate email | repeat W41a email | 409, still one row | ✅ 409 `Email already registered`, DB rows=1 |
+| W41g | Missing fields | empty body | 400 | ✅ 400 `Missing fields` |
+
+### W42 — Onboarding E2E per role (T6 student / T8 parent / T10 wiring)
+
+| # | Test | Steps | Expected | Result |
+|---|------|-------|----------|--------|
+| W42a | Driver path | / → Get Started → Driver card → /driver/register → submit | lands on /driver/home, session survives F5 | ❌ register works (signup 201 → login 200 → upload 201 → profile 201, inline ✅ msg) but NO session saved (bb_token null) and NO redirect — stays on /driver/register. See F4 |
+| W42b | Student path | chooser → /student/register → submit | auto-login → /student/home, F5 keeps session | ⚠️ page itself ✅ (signup → auto-login → /student/home, F5 keeps session) but chooser does NOT link to it — reached by direct URL only, see W42d/F5 |
+| W42c | Parent path | chooser → /parent/register → submit | auto-login → /parent/home, F5 keeps session | ❌ GET /parent/register → HTTP 404 — page does not exist (T8 never built it). See F5 |
+| W42d | Chooser no dead-end | signed-out browser, Student/Parent cards | reach the signup pages (no bounce to /login) | ❌ Student card → /student/home → bounced to /login; Parent card → same; Driver card → /driver/register ✅. T10 chooser wiring not on dev. See F5 |
+| W42e | Signup error cases | empty form · invalid email · duplicate email | inline errors, 0 requests / 409 inline, no crash | ✅ empty → "Please fill in all fields" + 0 requests · invalid → "Enter a valid email" + 0 requests · duplicate → 409 inline "Email already registered" (driver form: "All fields are required" + 0 requests) |
+| W42f | Admin signup regression | API role=admin | 403 | ✅ 403 (see W41d) |
+
+### W43 — F1: student page opened BEFORE trip start (T7 fix)
+
+| # | Test | Steps | Expected | Result |
+|---|------|-------|----------|--------|
+| W43a | Detects new trip | student no-trip page open → driver starts trip | "Trip in progress" + map appear WITHOUT manual refresh (≤~30s) | ✅ page flipped to "🚌 Trip in progress" + Live location + Trip #7 within ≤33s of the trip starting — zero refreshes/clicks (F1 confirmed FIXED) |
+| W43b | Poll rhythm | DevTools Network on student tab | ~30s interval with no trip → ~10s while active | ✅ measured: 3 req/68s idle · 8 req/33s + 3 req/26s active · performance-timeline deltas 10s×n while active → 30s×10 after end |
+| W43c | Trip ends | driver stops trip | status clears ≤~30s, rhythm back to 30s | ✅ "✅ Trip completed" + end time + map card gone within ≤33s, no refresh |
+| W43d | Logout stops polling | log out on student home | 0 further trip-status requests | ✅ logout → /login, bb_token cleared, 1 boundary request then 0 in the next 38s (> one 30s period) |
+
+### W44 — T9b: /driver/home refresh mid-trip (S4-T3 fix, was F2)
+
+| # | Test | Steps | Expected | Result |
+|---|------|-------|----------|--------|
+| W44a | Refresh during own active trip | F5 on /driver/home while trip active | Stop shown immediately (GET /driver/trips/active on mount), no 409 resync needed | ✅ fresh load with trip 8 active → GET /api/driver/trips/active 200 on mount, ⏹ Stop shown, no POST/409 (F2 confirmed FIXED). Note: preview-tool reload hung on "Checking session…" — dev-server HMR stall, see gotchas |
+| W44b | Trip ended in another tab | stop elsewhere → refresh | ▶ Start shown | ✅ stop via API ("other tab") → reload → GET active 200 → ▶ Start shown, no 409 needed |
+| W44c | No trip | fresh refresh | ▶ Start, normal start still works (201) | ✅ no trip → ▶ Start Trip on load; clicking it → POST /driver/trips/start 201 + flips to ⏹ Stop |
+
+### W45 — Link-child guards via the T8 UI (contract v11 entry 12; API guards already covered by W28/W29)
+
+| # | Test | Steps | Expected | Result |
+|---|------|-------|----------|--------|
+| W45a | Link success via UI | parent link form with a student email | 201, parent_child row in DB, child appears in /parent/home selector (entry 15) | ❌ UI → 400 `Missing or invalid studentId` — API route never implemented email mode (see F3). Sub-check: API `{studentId}` mode → 201, row in parent_student, chip appears in selector after reload ✅ |
+| W45b | Already linked | same pair again | 409, friendly inline message | ❌ blocked by the F3 400 (unreachable via UI). Sub-check: API studentId mode → 409 `Link already exists` ✅ |
+| W45c | Unknown email | no-such-email@x.com | 404 message | ❌ got 400 `Missing or invalid studentId` instead of 404 — email lookup does not exist server-side (F3). Malformed input is blocked client-side with 0 requests ✅ |
+| W45d | Target not a student | driver or admin email | 403 message | ❌ blocked by the F3 400. Sub-check: API studentId mode with driver token → 403 `Not a parent` ✅ |
+| W45e | No session | logged-out attempt | redirect to /login / 401, no row | ✅ signed-out /parent/home → redirect /login; API with no token → 401 `No token`, no row |
+| W45f | Skip + link later | skip at signup → link from /parent/home | both paths work | ❌ link-later card opens + client validation works, but submit → 400 (F3); skip-at-signup untestable — /parent/register 404 (F5) |
+
+### Findings (new this pass)
+
+- **F3 (blocker, T8): parent link-child by email is broken end-to-end.** The UI (parent/home) and contract v11 both use `{ email }`, but `app/api/parents/me/children/route.ts` was never updated — it only accepts `{ studentId }`, so every email attempt returns 400 `Missing or invalid studentId`. Parents cannot link a child through the UI at all, and contract v11 documents behavior the API does not implement (contract/implementation mismatch). Fix belongs to the T8 owner: implement email mode in the route.
+- **F4 (T10): driver register creates no session.** After the successful 4-step register (signup 201 → login 200 → upload 201 → profile 201) the token is discarded (`bb_token` null) and there is no redirect — the user sits on /driver/register. T10's specified fix (auth-context `login(token, role)` + `router.push('/driver/home')`) is not in the code.
+- **F5 (T6/T8/T10): onboarding chooser dead-ends.** /get-started Student and Parent cards link to /student/home and /parent/home, which bounce signed-out visitors to /login; /student/register exists but is unreachable from any UI link (direct URL only); /parent/register returns 404 (never built).
+- Environment gotcha (not an app bug): the preview browser's reload hung on "Checking session…" while the dev server was in a Turbopack HMR reconnect loop (its own log: "Turbopack's filesystem cache has been deleted because we previously detected an internal error"). Fresh full-page loads worked — W44 verified that way. Restart the dev server if HMR stalls.
+
+**Sprint 4 tally: W41 7/7 ✅ · W42 2✅ + 1⚠️ + 3❌ · W43 4/4 ✅ · W44 3/3 ✅ · W45 1✅ + 5❌ → 17 ✅ · 1 ⚠️ · 8 ❌.** F1 (T7) and F2/T9b (S4-T3) confirmed FIXED; new findings F3/F4/F5 logged → Sprint 5.
+
 ---
 
-Testers: Sprint 0 + Sprint 1 — Sinar · Sprint 2 — Wassim · Sprint 3 — Sinar
+Testers: Sprint 0 + Sprint 1 — Sinar · Sprint 2 — Wassim · Sprint 3 — Sinar · Sprint 4 — Sinar

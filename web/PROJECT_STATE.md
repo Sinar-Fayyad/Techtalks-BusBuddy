@@ -182,3 +182,24 @@ Gotchas: F1's test required a driver login to create a trip; the login API in th
 - Student/parent signup + link-child pages (T5/T6/T8 outputs) do not exist in the repo yet — ErrorMessage coverage on those pages is a follow-up once they merge.
 - Commit: 68ac652 "S4-T13: use shared ErrorMessage on welcome + chooser pages".
 - Tested: tsc --noEmit clean for changed files (only pre-existing LeafletMap TS2686 errors remain); dev server on :51841 returns HTTP 200 for / and /get-started; rendered HTML unchanged (Get Started button + role cards present, 0 alert elements).
+
+## 2026-10-11 — [Sinar Fayyad] — S4-T15 sprint 4 testing + docs — done
+
+- Added the Sprint 4 test section to web/docs/TESTING.md: W41 signup role matrix
+  (incl. admin 403 rejection), W42 onboarding E2E per role, W43 F1, W44 T9b,
+  W45 link-child guards through the T8 UI. Sprint report drafted in the PR body.
+- Files: web/docs/TESTING.md · web/PROJECT_STATE.md (this block)
+- Endpoints / DB / schema / contract: NONE (docs-only task, contract stays v11)
+- Tested: 26 checks executed (W41–W45, TESTING.md Sprint 4 section) — success AND error
+  cases, verified in curl/DB/browser. 17 ✅ · 1 ⚠️ · 8 ❌. F1 (T7) and F2/T9b (S4-T3)
+  confirmed FIXED live; failures are app bugs logged as new findings F3/F4/F5 (not
+  fixed here — other tasks' code). Test users cleaned: 0 t15-* rows left in DB, test
+  license file removed.
+- Gotchas: (1) F3 blocker — parent link-by-email dead: route.ts is still studentId-only
+  while UI + contract v11 use { email } → every UI attempt 400. (2) F4 — driver register
+  saves no session, no redirect to /driver/home (T10 spec not in code). (3) F5 — chooser
+  Student/Parent cards dead-end to /login; /parent/register 404; /student/register
+  unreachable from UI. (4) Stopping trips during W43/W44 left 0 active trips — re-run
+  seed.sql before any demo. (5) Preview reload can hang on "Checking session…" when the
+  dev server is in a Turbopack HMR loop (log warns of internal error) — restart dev server;
+  fresh page loads work. (6) Port: this pass ran on :51841 (existing server), :3000 free.
