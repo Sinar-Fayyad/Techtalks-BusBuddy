@@ -156,6 +156,9 @@ Environment: Windows 10 · WAMP MySQL 8.0.18 port 3308 · Next.js dev :3000 · b
 2. ~~Endpoint 13 (POST /trips/{id}/students) contract-planned, NOT built — student-trip linking via direct trip_students SQL only~~ ✅ IMPLEMENTED (T10, 02/10) — admin API only, no UI yet; students linked via API/seed
 3. ~~Mobile M1–M6 not re-run this pass (no device); mobile still has no driver-status/trip screens~~ ✅ M1–M6 6/6 (T15, real device) · T13 added DriverTripScreen — mobile GPS sharing still missing (Sprint 4)
 4. ~~Seed "full reset" recipe documented but not executed end-to-end after edit~~ ✅ executed end-to-end 2026-10-04 (T14 Q5)
+5. ~~F1: student page open before trip start misses the map~~ ✅ FIXED (T7) — re-verified live in Sprint 4 pass (W43a–d, 4/4 ✅)
+6. ~~F2: /driver/home refresh showed stale Start~~ ✅ FIXED (S4-T3) — re-verified live (W44a–c, 3/3 ✅)
+7. **NEW → Sprint 5:** F3 parent link-by-email 400 (route not updated for contract v11) · F4 driver register saves no session / no redirect · F5 chooser Student+Parent cards dead-end to /login, /parent/register 404, /student/register unreachable
 
 ## Sprint 3 — T14 pending quick-checks (2026-10-04) — 5/5 ✅
 
