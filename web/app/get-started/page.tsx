@@ -1,12 +1,26 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuth, isLoggedIn, ROLE_HOME } from '@/app/auth-context';
 import ErrorMessage from '@/components/ErrorMessage';
 import styles from './page.module.css';
 
 export default function GetStartedPage() {
+  const router = useRouter();
+  const { token, role, ready } = useAuth();
+
+  // Logged-in guard: already authenticated users skip the role chooser.
+  useEffect(() => {
+    if (isLoggedIn({ token, role })) {
+      router.replace(ROLE_HOME[role!]);
+    }
+  }, [ready, token, role, router]);
+
   return (
     <main className={styles.chooser}>
+      {/* Shared error slot: no async work on this page yet, so nothing to report. */}
       <ErrorMessage message={null} />
       <div className={styles.chooserTop}>
         <div className={styles.brandIcon}>
