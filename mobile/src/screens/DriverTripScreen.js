@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -20,34 +20,55 @@ export default function DriverTripScreen({ token, onSessionExpired, onLogout, on
   const [busy, setBusy] = useState(false); // Start/Stop in flight
   const [error, setError] = useState('');
 
+  // ← T6: alive = screen still mounted; inFlight = a trip action is running;
+  // profileInFlight = a profile refresh is running
+  const alive = useRef(true);
+  const inFlight = useRef(false);
+  const profileInFlight = useRef(false);
+
+  useEffect(() => {
+    alive.current = true;
+    return () => { alive.current = false; };
+  }, []);
+
   useEffect(() => {
     loadProfile();
   }, []);
 
   // Mount chain: who am I first, then (only if verified) do I have an active trip?
-  async function loadProfile() {
+  // force=true is used internally after a 403/404, so it never gets swallowed by the gate.
+  async function loadProfile({ force = false } = {}) {
+    if (!force && profileInFlight.current) return; // ← T6: rapid taps collapse to one request
+    profileInFlight.current = true;
     setError('');
     try {
       const me = await apiFetch('/api/driver/me', token);
+      if (!alive.current) return; // ← T6
       if (me.status === 401) return onSessionExpired(); // token expired → back to login
       if (me.status === 404) return setView('none'); // driver never created a profile
       if (!me.ok) throw new Error(`status ${me.status}`);
-      const status = me.data.driver.status;
+      const status = me.data && me.data.driver ? me.data.driver.status : null;
+      if (!status) return setView('none'); // ← T6: malformed 200 must not crash
       if (status === 'verified') {
         await loadTrip();
-        await loadTrips(); // ← T5: fill the My trips list on first render
+        await loadTrips(); // ← T5: fill the My trips list
+        if (!alive.current) return; // ← T6
         setView('ready');
       } else {
         setView(status); // 'pending' | 'rejected'
       }
     } catch (e) {
+      if (!alive.current) return; // ← T6
       setView('error');
       setError('Cannot reach the server. Check Wi-Fi and that the web server is running.');
+    } finally {
+      profileInFlight.current = false;
     }
   }
 
   async function loadTrip() {
     const r = await apiFetch('/api/driver/trips/active', token);
+    if (!alive.current) return; // ← T6
     if (r.status === 401) return onSessionExpired();
     if (r.ok) setTrip(r.data.trip || null);
   }
@@ -55,15 +76,19 @@ export default function DriverTripScreen({ token, onSessionExpired, onLogout, on
   // ← T5: the caller's own last 5 trips, newest first (contract entry 18)
   async function loadTrips() {
     const r = await apiFetch('/api/driver/trips', token);
+    if (!alive.current) return; // ← T6
     if (r.status === 401) return onSessionExpired();
     if (r.ok) setTrips(r.data.trips || []);
   }
 
   async function startTrip() {
+    if (inFlight.current) return; // ← T6: rapid taps fire exactly one POST
+    inFlight.current = true;
     setBusy(true);
     setError('');
     try {
       const r = await apiFetch('/api/driver/trips/start', token, { method: 'POST' });
+      if (!alive.current) return; // ← T6
       if (r.status === 401) return onSessionExpired();
       if (r.status === 201) {
         setTrip(r.data.trip);
@@ -72,22 +97,26 @@ export default function DriverTripScreen({ token, onSessionExpired, onLogout, on
         await loadTrip(); // started elsewhere (other tab) → sync UI
         await loadTrips(); // ← T5
       } else if (r.status === 403 || r.status === 404) {
-        await loadProfile(); // status may have changed
+        await loadProfile({ force: true }); // status may have changed
       } else {
-        setError(r.data.error || `Could not start the trip (${r.status}).`);
+        setError((r.data && r.data.error) || `Could not start the trip (${r.status}).`);
       }
     } catch (e) {
-      setError('Cannot reach the server. Check Wi-Fi and that the web server is running.');
+      if (alive.current) setError('Cannot reach the server. Check Wi-Fi and that the web server is running.');
     } finally {
-      setBusy(false);
+      inFlight.current = false;
+      if (alive.current) setBusy(false); // ← T6
     }
   }
 
   async function stopTrip() {
+    if (inFlight.current) return; // ← T6
+    inFlight.current = true;
     setBusy(true);
     setError('');
     try {
       const r = await apiFetch('/api/driver/trips/stop', token, { method: 'POST' });
+      if (!alive.current) return; // ← T6
       if (r.status === 401) return onSessionExpired();
       if (r.status === 200) {
         setTrip(null);
@@ -96,12 +125,13 @@ export default function DriverTripScreen({ token, onSessionExpired, onLogout, on
         await loadTrip(); // already stopped elsewhere → sync UI
         await loadTrips(); // ← T5
       } else {
-        setError(r.data.error || `Could not stop the trip (${r.status}).`);
+        setError((r.data && r.data.error) || `Could not stop the trip (${r.status}).`);
       }
     } catch (e) {
-      setError('Cannot reach the server. Check Wi-Fi and that the web server is running.');
+      if (alive.current) setError('Cannot reach the server. Check Wi-Fi and that the web server is running.');
     } finally {
-      setBusy(false);
+      inFlight.current = false;
+      if (alive.current) setBusy(false); // ← T6
     }
   }
 
@@ -141,7 +171,7 @@ export default function DriverTripScreen({ token, onSessionExpired, onLogout, on
       <View style={s.center}>
         <Text style={s.error}>{error}</Text>
         <View style={s.action}>
-          <Button label="Retry" onPress={loadProfile} />
+          <Button label="Retry" onPress={() => loadProfile()} />
         </View>
       </View>
     );
@@ -158,7 +188,7 @@ export default function DriverTripScreen({ token, onSessionExpired, onLogout, on
           </Text>
         </View>
         <View style={s.action}>
-          <Button label="Refresh status" onPress={loadProfile} />
+          <Button label="Refresh status" onPress={() => loadProfile()} />
         </View>
       </View>
     );
@@ -187,7 +217,7 @@ export default function DriverTripScreen({ token, onSessionExpired, onLogout, on
         )}
 
         <View style={s.action}>
-          <Button label="Refresh status" onPress={loadProfile} />
+          <Button label="Refresh status" onPress={() => loadProfile()} />
         </View>
       </View>
     );
@@ -232,13 +262,6 @@ export default function DriverTripScreen({ token, onSessionExpired, onLogout, on
 
       {error !== '' && <Text style={s.error}>{error}</Text>}
 
-      {/* ← T4 : verified drivers get the same link (trip screen stays the trip screen) */}
-      {onOpenStatus && (
-        <TouchableOpacity onPress={onOpenStatus}>
-          <Text style={s.refresh}>My status & license</Text>
-        </TouchableOpacity>
-      )}
-
       {/* ← T4: verified drivers get the same link (trip screen stays the trip screen) */}
       {onOpenStatus && (
         <TouchableOpacity onPress={onOpenStatus}>
@@ -246,12 +269,12 @@ export default function DriverTripScreen({ token, onSessionExpired, onLogout, on
         </TouchableOpacity>
       )}
 
-      <TouchableOpacity onPress={loadProfile}>
+      <TouchableOpacity onPress={() => loadProfile()}>
         <Text style={s.refresh}>Refresh status</Text>
       </TouchableOpacity>
     </ScrollView>
   );
-} 
+}
 
 const s = StyleSheet.create({
   screen: { flex: 1 },
