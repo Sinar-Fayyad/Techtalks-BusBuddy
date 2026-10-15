@@ -9,7 +9,12 @@
   --text-muted: #6b7280;
 
   --bb-card-bg-fallback: rgba(16, 26, 118, 0.94);
-  --bb-bg-gradient: linear-gradient(160deg, #08d9d6 0%, #243bdb 45%, #b000ff 100%);
+  --bb-bg-gradient: linear-gradient(160deg, #011875 0%, #012b8d 50%, #013ddb 100%);
+
+  --bb-card-bg: rgba(255, 255, 255, 0.08);
+  --bb-border-gradient: linear-gradient(135deg, #01a9fe, #013ddb);
+  --bb-input-bg: rgba(255, 255, 255, 0.06);
+  --bb-btn-gradient: linear-gradient(135deg, #01a9fe, #013ddb);
 
   --bb-text: #ffffff;
   --bb-text-dim: rgba(255, 255, 255, 0.75);
