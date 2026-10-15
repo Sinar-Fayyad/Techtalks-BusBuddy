@@ -232,7 +232,7 @@ export default function DriverTripScreen({ token, onSessionExpired, onLogout, on
 
       {error !== '' && <Text style={s.error}>{error}</Text>}
 
-      {/* ← T4: verified drivers get the same link (trip screen stays the trip screen) */}
+      {/* ← T4 : verified drivers get the same link (trip screen stays the trip screen) */}
       {onOpenStatus && (
         <TouchableOpacity onPress={onOpenStatus}>
           <Text style={s.refresh}>My status & license</Text>
@@ -244,7 +244,7 @@ export default function DriverTripScreen({ token, onSessionExpired, onLogout, on
       </TouchableOpacity>
     </ScrollView>
   );
-}
+} 
 
 const s = StyleSheet.create({
   screen: { flex: 1 },
