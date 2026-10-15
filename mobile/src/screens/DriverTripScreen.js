@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  TouchableOpacity,
+  ScrollView,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { apiFetch } from '../../api';
 import Button from '../components/Button';
@@ -9,6 +16,7 @@ import Button from '../components/Button';
 export default function DriverTripScreen({ token, onSessionExpired, onLogout, onOpenStatus }) {
   const [view, setView] = useState('loading');
   const [trip, setTrip] = useState(null); // active trip or null
+  const [trips, setTrips] = useState([]); // ← T5: last 5 trips (contract entry 18)
   const [busy, setBusy] = useState(false); // Start/Stop in flight
   const [error, setError] = useState('');
 
@@ -27,6 +35,7 @@ export default function DriverTripScreen({ token, onSessionExpired, onLogout, on
       const status = me.data.driver.status;
       if (status === 'verified') {
         await loadTrip();
+        await loadTrips(); // ← T5: fill the My trips list on first render
         setView('ready');
       } else {
         setView(status); // 'pending' | 'rejected'
@@ -43,16 +52,30 @@ export default function DriverTripScreen({ token, onSessionExpired, onLogout, on
     if (r.ok) setTrip(r.data.trip || null);
   }
 
+  // ← T5: the caller's own last 5 trips, newest first (contract entry 18)
+  async function loadTrips() {
+    const r = await apiFetch('/api/driver/trips', token);
+    if (r.status === 401) return onSessionExpired();
+    if (r.ok) setTrips(r.data.trips || []);
+  }
+
   async function startTrip() {
     setBusy(true);
     setError('');
     try {
       const r = await apiFetch('/api/driver/trips/start', token, { method: 'POST' });
       if (r.status === 401) return onSessionExpired();
-      if (r.status === 201) setTrip(r.data.trip);
-      else if (r.status === 409) await loadTrip(); // started elsewhere (other tab) → sync UI
-      else if (r.status === 403 || r.status === 404) await loadProfile(); // status may have changed
-      else setError(r.data.error || `Could not start the trip (${r.status}).`);
+      if (r.status === 201) {
+        setTrip(r.data.trip);
+        await loadTrips(); // ← T5: the trip we just started is row 1
+      } else if (r.status === 409) {
+        await loadTrip(); // started elsewhere (other tab) → sync UI
+        await loadTrips(); // ← T5
+      } else if (r.status === 403 || r.status === 404) {
+        await loadProfile(); // status may have changed
+      } else {
+        setError(r.data.error || `Could not start the trip (${r.status}).`);
+      }
     } catch (e) {
       setError('Cannot reach the server. Check Wi-Fi and that the web server is running.');
     } finally {
@@ -66,9 +89,15 @@ export default function DriverTripScreen({ token, onSessionExpired, onLogout, on
     try {
       const r = await apiFetch('/api/driver/trips/stop', token, { method: 'POST' });
       if (r.status === 401) return onSessionExpired();
-      if (r.status === 200) setTrip(null);
-      else if (r.status === 404) await loadTrip(); // already stopped elsewhere → sync UI
-      else setError(r.data.error || `Could not stop the trip (${r.status}).`);
+      if (r.status === 200) {
+        setTrip(null);
+        await loadTrips(); // ← T5: that row flips from "Active" to an end time
+      } else if (r.status === 404) {
+        await loadTrip(); // already stopped elsewhere → sync UI
+        await loadTrips(); // ← T5
+      } else {
+        setError(r.data.error || `Could not stop the trip (${r.status}).`);
+      }
     } catch (e) {
       setError('Cannot reach the server. Check Wi-Fi and that the web server is running.');
     } finally {
@@ -76,24 +105,25 @@ export default function DriverTripScreen({ token, onSessionExpired, onLogout, on
     }
   }
 
-  function fmtTime(utc) {
-    if (!utc) return '';
-    return new Date(String(utc).replace(' ', 'T') + 'Z').toLocaleTimeString();
+  // UTC from the API → local time; tolerates "YYYY-MM-DD HH:MM:SS" or ISO.
+  function fmtTime(iso) {
+    if (!iso) return '—';
+    const raw = String(iso);
+    const d = new Date(raw.replace(' ', 'T') + (raw.endsWith('Z') ? '' : 'Z'));
+    return isNaN(d.getTime()) ? raw : d.toLocaleString();
   }
 
-  // Shared wrapper: web-style gradient + logout, same on every view
-  function shell(content) {
+  // Shared chrome: gradient + header with Log out.
+  function shell(children) {
     return (
-      <LinearGradient
-        colors={['#06b6d4', '#3b82f6', '#a855f7']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={s.flex}
-      >
-        <TouchableOpacity onPress={onLogout} style={s.logout}>
-          <Text style={s.logoutText}>Log out</Text>
-        </TouchableOpacity>
-        {content}
+      <LinearGradient colors={['#0f172a', '#1e293b']} style={s.screen}>
+        <View style={s.header}>
+          <Text style={s.headerTitle}>Driver</Text>
+          <TouchableOpacity onPress={onLogout} hitSlop={12}>
+            <Text style={s.headerAction}>Log out</Text>
+          </TouchableOpacity>
+        </View>
+        {children}
       </LinearGradient>
     );
   }
@@ -101,37 +131,52 @@ export default function DriverTripScreen({ token, onSessionExpired, onLogout, on
   if (view === 'loading') {
     return shell(
       <View style={s.center}>
-        <ActivityIndicator size="large" color="#fff" />
+        <ActivityIndicator size="large" color="#f59e0b" />
       </View>
     );
   }
 
   if (view === 'error') {
     return shell(
-      <View style={s.container}>
-        <Text style={s.title}>BusBuddy Driver</Text>
-        <View style={[s.card, s.cardRed]}>
-          <Text style={s.cardTitle}>Connection problem</Text>
-          <Text style={s.cardText}>{error}</Text>
+      <View style={s.center}>
+        <Text style={s.error}>{error}</Text>
+        <View style={s.action}>
+          <Button label="Retry" onPress={loadProfile} />
         </View>
-        <Button label="Retry" onPress={loadProfile} style={s.button} textStyle={s.buttonText} />
       </View>
     );
   }
 
-  if (view === 'pending' || view === 'rejected' || view === 'none') {
-    const msg = {
-      pending: ['License under review', 'An admin still needs to verify your license. Trip controls unlock once your status becomes "verified".'],
-      rejected: ['License rejected', 'Your license was not approved. Please contact an admin or re-register with a valid license.'],
-      none: ['No driver profile', 'Your account has no driver profile yet. Register a driver profile with your license to get verified.'],
-    }[view];
+  if (view === 'none') {
     return shell(
-      <View style={s.container}>
-        <Text style={s.title}>BusBuddy Driver</Text>
-        <View style={[s.card, view === 'rejected' && s.cardRed]}>
-          <Text style={s.cardTitle}>{msg[0]}</Text>
-          <Text style={s.cardText}>{msg[1]}</Text>
+      <View style={s.center}>
+        <View style={s.card}>
+          <Text style={s.cardTitle}>No driver profile</Text>
+          <Text style={s.cardText}>
+            This account has no driver profile yet. Create one on the BusBuddy website, then come
+            back and refresh.
+          </Text>
         </View>
+        <View style={s.action}>
+          <Button label="Refresh status" onPress={loadProfile} />
+        </View>
+      </View>
+    );
+  }
+
+  if (view === 'pending' || view === 'rejected') {
+    const pending = view === 'pending';
+    return shell(
+      <View style={s.center}>
+        <View style={s.card}>
+          <Text style={s.cardTitle}>{pending ? '⏳ Pending approval' : '✗ Rejected'}</Text>
+          <Text style={s.cardText}>
+            {pending
+              ? 'Your driver profile is waiting for an admin to verify it. You can start trips once it is verified.'
+              : 'Your driver profile was rejected by an admin. Contact the BusBuddy team to have it reviewed again.'}
+          </Text>
+        </View>
+
         {error !== '' && <Text style={s.error}>{error}</Text>}
 
         {/* ← T4: same entry point from every view, so pending/rejected drivers can see their status + license */}
@@ -140,30 +185,58 @@ export default function DriverTripScreen({ token, onSessionExpired, onLogout, on
             <Text style={s.refresh}>My status & license</Text>
           </TouchableOpacity>
         )}
+
+        <View style={s.action}>
+          <Button label="Refresh status" onPress={loadProfile} />
+        </View>
       </View>
     );
   }
 
-  // view === 'ready' → verified driver
+  // view === 'ready'
   return shell(
-    <View style={s.container}>
-      <Text style={s.title}>BusBuddy Driver</Text>
-
-      {trip ? (
-        <View style={[s.card, s.cardActive]}>
-          <Text style={s.cardTitle}>Trip active</Text>
-          <Text style={s.cardText}>Started at {fmtTime(trip.start_time)} (your local time)</Text>
+    <ScrollView
+      style={s.screen}
+      contentContainerStyle={s.container}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={s.card}>
+        <Text style={s.cardTitle}>{trip ? 'Trip in progress' : 'No active trip'}</Text>
+        <Text style={s.cardText}>
+          {trip
+            ? `Started at ${fmtTime(trip.start_time)}. Passengers can see your location while the trip is running.`
+            : 'Start a trip when you pick up passengers. Your location is shared with them until you stop.'}
+        </Text>
+        <View style={s.action}>
+          <Button
+            label={trip ? 'Stop trip' : 'Start trip'}
+            onPress={trip ? stopTrip : startTrip}
+            loading={busy}
+          />
         </View>
-      ) : (
-        <Text style={s.subtitle}>No active trip</Text>
-      )}
+      </View>
+
+      {/* ← T5: My trips — parity with the web driver home (contract entry 18) */}
+      <View style={s.card}>
+        <Text style={s.cardTitle}>My trips</Text>
+        {trips.length === 0 ? (
+          <Text style={s.cardText}>No trips yet.</Text>
+        ) : (
+          trips.map((t) => (
+            <Text key={t.id} style={s.cardText}>
+              {fmtTime(t.start_time)} → {t.end_time ? fmtTime(t.end_time) : 'Active'}
+            </Text>
+          ))
+        )}
+      </View>
 
       {error !== '' && <Text style={s.error}>{error}</Text>}
 
-      {trip ? (
-        <Button label="Stop trip" onPress={stopTrip} loading={busy} style={s.button} textStyle={s.buttonText} />
-      ) : (
-        <Button label="Start trip" onPress={startTrip} loading={busy} style={s.button} textStyle={s.buttonText} />
+      {/* ← T4 : verified drivers get the same link (trip screen stays the trip screen) */}
+      {onOpenStatus && (
+        <TouchableOpacity onPress={onOpenStatus}>
+          <Text style={s.refresh}>My status & license</Text>
+        </TouchableOpacity>
       )}
 
       {/* ← T4: verified drivers get the same link (trip screen stays the trip screen) */}
@@ -176,25 +249,35 @@ export default function DriverTripScreen({ token, onSessionExpired, onLogout, on
       <TouchableOpacity onPress={loadProfile}>
         <Text style={s.refresh}>Refresh status</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
-}
+} 
 
 const s = StyleSheet.create({
-  flex: { flex: 1 },
-  container: { flex: 1, justifyContent: 'center', padding: 24 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  logout: { alignSelf: 'flex-end', backgroundColor: 'rgba(15,23,42,0.85)', borderRadius: 20, paddingVertical: 8, paddingHorizontal: 18, marginTop: 40, marginRight: 24 },
-  logoutText: { color: '#fff', fontWeight: '600', fontSize: 14 },
-  title: { color: '#fff', fontSize: 28, fontWeight: '700', textAlign: 'center', marginBottom: 24 },
-  subtitle: { color: '#e0f2fe', fontSize: 16, textAlign: 'center', marginBottom: 16 },
-  card: { backgroundColor: 'rgba(255,255,255,0.12)', borderColor: 'rgba(191,219,254,0.7)', borderWidth: 1, borderRadius: 16, padding: 16, marginBottom: 20 },
-  cardActive: { borderColor: '#fde68a' },
-  cardRed: { borderColor: '#fca5a5' },
+  screen: { flex: 1 },
+  container: { flexGrow: 1, justifyContent: 'center', padding: 24 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingTop: 56,
+    paddingBottom: 8,
+  },
+  headerTitle: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  headerAction: { color: '#a5f3fc', fontSize: 14, fontWeight: '600' },
+  card: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(191,219,254,0.7)',
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+  },
   cardTitle: { color: '#fff', fontSize: 18, fontWeight: '700', marginBottom: 6 },
   cardText: { color: '#e0f2fe', fontSize: 14, lineHeight: 20 },
+  action: { marginTop: 12 },
   error: { color: '#fecaca', textAlign: 'center', marginBottom: 12 },
-  button: { backgroundColor: '#0f172a', borderRadius: 24, paddingVertical: 14, alignItems: 'center' },
-  buttonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
   refresh: { color: '#a5f3fc', textAlign: 'center', marginTop: 20 },
 });

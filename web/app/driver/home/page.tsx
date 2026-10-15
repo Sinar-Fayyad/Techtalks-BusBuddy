@@ -17,17 +17,35 @@ interface TripInfo {
   start_time: string;
   end_time: string | null;
 }
+interface ActiveTripInfo {
+  id: number;
+  driver_id: number;
+  start_time: string;
+  end_time: string | null;
+  latitude: string | null;
+  longitude: string | null;
+  location_updated_at: string | null;
+}
+
+// ← T5: API timestamps are UTC; they arrive either as ISO ("…Z") or as MySQL
+// DATETIME ("YYYY-MM-DD HH:MM:SS"). Without the "Z", JS parses them as local time,
+// which silently shows the UTC clock reading as if it were local.
+function fmtTime(value: string) {
+  const raw = String(value);
+  const d = new Date(raw.replace(' ', 'T') + (raw.endsWith('Z') ? '' : 'Z'));
+  return isNaN(d.getTime()) ? raw : d.toLocaleTimeString();
+}
 
 export default function DriverHomePage() {
   const router = useRouter();
   const { token, role, ready, logout } = useAuth();
   const [driver, setDriver] = useState<DriverInfo | null>(null);
   const [onTrip, setOnTrip] = useState(false);
-  const [lastTrip, setLastTrip] = useState<TripInfo | null>(null);
+  const [lastTrip, setLastTrip] = useState<ActiveTripInfo | null>(null);
+  const [trips, setTrips] = useState<TripInfo[]>([]); // ← T5: last 5 trips (contract entry 18)
   const [error, setError] = useState('');
   const [starting, setStarting] = useState(false);
   const [stopping, setStopping] = useState(false);
-  const [tripHistory, setTripHistory] = useState<TripInfo[]>([]);
 
   // --- SESSION GUARD: identical to status page ---
   useEffect(() => {
@@ -52,22 +70,62 @@ export default function DriverHomePage() {
     })();
   }, [ready, token, role, logout]);
 
-  // --- ACTIVE TRIP (T9b): fetch on mount so a trip started in another tab is never stale.
-  //     onTrip is derived from the backend truth, not local state. Cancelled flag guards StrictMode. ---
+  // --- LOAD ACTIVE TRIP (T9): refresh mid-trip shows Stop immediately ---
   useEffect(() => {
     if (!ready || !token || role !== 'driver') return;
-    let cancelled = false;
+    let cancelled = false; // StrictMode-safe: ignore the first mount's response
     (async () => {
       try {
         const res = await fetch('/api/driver/trips/active', {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.status === 401) { logout(); return; }
-        if (!res.ok || cancelled) return;
+        if (!res.ok) { console.error('Active-trip lookup failed:', res.status); return; }
         const data = await res.json();
-        if (!cancelled) setOnTrip(!!data.trip);
-      } catch {
-        // non-critical: page keeps the last-known onTrip state
+        if (!cancelled && data.trip) {
+          setLastTrip(data.trip);
+          setOnTrip(true);
+        }
+        // trip=null → leave onTrip as false, nothing to do
+      } catch (e) {
+        console.error('Active-trip lookup failed:', e); // non-fatal, page stays usable
+      }
+      if (cancelled) return;
+    })();
+    return () => { cancelled = true; };
+  }, [ready, token, role, logout]);
+
+  // ← T5: My-trips history (contract entry 18 — the caller's own last 5, newest first).
+  // Non-fatal by design: if this fails the trip controls must still work.
+  const loadTrips = async () => {
+    try {
+      const res = await fetch('/api/driver/trips', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.status === 401) { logout(); return; }
+      if (!res.ok) { console.error('Trip history lookup failed:', res.status); return; }
+      const data = await res.json();
+      setTrips(data.trips ?? []);
+    } catch (e) {
+      console.error('Trip history lookup failed:', e);
+    }
+  };
+
+  // ← T5: initial history load, same StrictMode-safe shape as the active-trip effect.
+  useEffect(() => {
+    if (!ready || !token || role !== 'driver') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/driver/trips', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.status === 401) { logout(); return; }
+        if (!res.ok) { console.error('Trip history lookup failed:', res.status); return; }
+        const data = await res.json();
+        if (!cancelled) setTrips(data.trips ?? []);
+      } catch (e) {
+        console.error('Trip history lookup failed:', e); // non-fatal
       }
     })();
     return () => { cancelled = true; };
@@ -86,12 +144,14 @@ export default function DriverHomePage() {
       if (res.status === 409) {
         setOnTrip(true);
         setError('You already have an active trip — stop it first.');
+        await loadTrips(); // ← T5: another tab may have started it
         return;
       }
       if (!res.ok) { setError('Could not start the trip. Try again.'); return; }
       const data = await res.json();
       setLastTrip(data.trip);
       setOnTrip(true);
+      await loadTrips(); // ← T5: the trip we just started is now row 1
     } catch {
       setError('Server error — is the dev server running?');
     } finally {
@@ -112,12 +172,14 @@ export default function DriverHomePage() {
       if (res.status === 404) {
         setOnTrip(false);
         setError('No active trip found — nothing to stop.');
+        await loadTrips(); // ← T5: sync history after a stale Stop
         return;
       }
       if (!res.ok) { setError('Could not stop the trip. Try again.'); return; }
       const data = await res.json();
       setLastTrip(data.trip);
       setOnTrip(false);
+      await loadTrips(); // ← T5: that row gains its end time without a reload
     } catch {
       setError('Server error — is the dev server running?');
     } finally {
@@ -182,8 +244,8 @@ export default function DriverHomePage() {
             {lastTrip && (
               <p style={{ color: 'var(--bb-text-dim)', margin: '0 0 1rem 0' }}>
                 {lastTrip.end_time
-                  ? `Last trip: started ${new Date(lastTrip.start_time).toLocaleTimeString()} · ended ${new Date(lastTrip.end_time).toLocaleTimeString()}`
-                  : `Started at ${new Date(lastTrip.start_time).toLocaleTimeString()} (UTC)`}
+                  ? `Last trip: started ${fmtTime(lastTrip.start_time)} · ended ${fmtTime(lastTrip.end_time)}`
+                  : `Started at ${fmtTime(lastTrip.start_time)}`}
               </p>
             )}
             {onTrip ? (
@@ -191,8 +253,29 @@ export default function DriverHomePage() {
             ) : (
               <Button color="primary" onClick={startTrip}>{starting ? 'Starting…' : '▶ Start Trip'}</Button>
             )}
-                        <GpsShare tripActive={onTrip} />
+            <GpsShare tripActive={onTrip} />
+          </section>
+        )}
 
+        {/* --- T5: My trips — parity with the driver home spec --- */}
+        {driver && verified && (
+          <section style={{
+            background: 'var(--bb-card-bg)',
+            border: '1px solid var(--bb-link)',
+            borderRadius: 16,
+            padding: '1.5rem',
+            marginTop: '1rem',
+          }}>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 0.75rem 0' }}>My trips</h2>
+            {trips.length === 0 ? (
+              <p style={{ margin: 0, color: 'var(--bb-text-dim)' }}>No trips yet.</p>
+            ) : (
+              trips.map((t) => (
+                <p key={t.id} style={{ color: 'var(--bb-text-dim)', margin: '0 0 0.4rem 0' }}>
+                  {fmtTime(t.start_time)} → {t.end_time ? fmtTime(t.end_time) : 'Active'}
+                </p>
+              ))
+            )}
           </section>
         )}
 
@@ -210,37 +293,6 @@ export default function DriverHomePage() {
             </p>
           </section>
         )}
-
-        {/* --- T11: My trips — last 5, newest first; status derived from end_time --- */}
-        <section style={{
-          background: 'var(--bb-card-bg)',
-          border: '1px solid var(--bb-link)',
-          borderRadius: 16,
-          padding: '1.5rem',
-          marginTop: '1rem',
-        }}>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 0.75rem 0' }}>My trips</h2>
-          {tripHistory.length === 0 ? (
-            <p style={{ margin: 0, color: 'var(--bb-text-dim)' }}>No trips yet.</p>
-          ) : (
-            <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: '0.75rem' }}>
-              {tripHistory.map((t) => (
-                <li key={t.id} style={{ border: '1px solid var(--bb-link)', borderRadius: 12, padding: '0.75rem 1rem' }}>
-                  <p style={{ margin: 0, fontWeight: 600 }}>{new Date(t.start_time).toLocaleDateString()}</p>
-                  <p style={{ margin: '0.25rem 0 0 0', color: 'var(--bb-text-dim)' }}>
-                    {new Date(t.start_time).toLocaleTimeString()} →{' '}
-                    {t.end_time ? new Date(t.end_time).toLocaleTimeString() : '—'}
-                  </p>
-                  <p style={{ margin: '0.25rem 0 0 0' }}>
-                    {t.end_time
-                      ? <span style={{ color: 'var(--bb-text-dim)' }}>Ended</span>
-                      : <span style={{ color: 'var(--bb-link)', fontWeight: 700 }}>Active now</span>}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
       </div>
     </main>
   );
