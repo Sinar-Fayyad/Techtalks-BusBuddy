@@ -6,7 +6,6 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   ScrollView,
-  BackHandler,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { apiFetch } from '../../api';
@@ -113,10 +112,10 @@ export default function DriverTripScreen({ token, onSessionExpired, onLogout, on
     return isNaN(d.getTime()) ? raw : d.toLocaleString();
   }
 
-  // Shared chrome: gradient header + centered card, with Log out in the header.
+  // Shared chrome: gradient + header with Log out.
   function shell(children) {
     return (
-      <LinearGradient colors={['#0f172a', '#1e293b']} style={s.flex}>
+      <LinearGradient colors={['#0f172a', '#1e293b']} style={s.screen}>
         <View style={s.header}>
           <Text style={s.headerTitle}>Driver</Text>
           <TouchableOpacity onPress={onLogout} hitSlop={12}>
@@ -139,7 +138,7 @@ export default function DriverTripScreen({ token, onSessionExpired, onLogout, on
   if (view === 'error') {
     return shell(
       <View style={s.center}>
-        <Text style={s.errorText}>{error}</Text>
+        <Text style={s.error}>{error}</Text>
         <View style={s.action}>
           <Button label="Retry" onPress={loadProfile} />
         </View>
@@ -176,9 +175,16 @@ export default function DriverTripScreen({ token, onSessionExpired, onLogout, on
               : 'Your driver profile was rejected by an admin. Contact the BusBuddy team to have it reviewed again.'}
           </Text>
         </View>
-        <TouchableOpacity style={s.refresh} onPress={onOpenStatus}>
-          <Text style={s.refreshText}>My status &amp; license</Text>
-        </TouchableOpacity>
+
+        {error !== '' && <Text style={s.error}>{error}</Text>}
+
+        {/* ← T4: same entry point from every view, so pending/rejected drivers can see their status + license */}
+        {onOpenStatus && (
+          <TouchableOpacity onPress={onOpenStatus}>
+            <Text style={s.refresh}>My status &amp; license</Text>
+          </TouchableOpacity>
+        )}
+
         <View style={s.action}>
           <Button label="Refresh status" onPress={loadProfile} />
         </View>
@@ -189,7 +195,7 @@ export default function DriverTripScreen({ token, onSessionExpired, onLogout, on
   // view === 'ready'
   return shell(
     <ScrollView
-      style={s.flex}
+      style={s.screen}
       contentContainerStyle={s.container}
       showsVerticalScrollIndicator={false}
     >
@@ -209,7 +215,7 @@ export default function DriverTripScreen({ token, onSessionExpired, onLogout, on
         </View>
       </View>
 
-      {/* ← T5: My trips — parity with the web driver home */}
+      {/* ← T5: My trips — parity with the web driver home (contract entry 18) */}
       <View style={s.card}>
         <Text style={s.cardTitle}>My trips</Text>
         {trips.length === 0 ? (
@@ -223,43 +229,47 @@ export default function DriverTripScreen({ token, onSessionExpired, onLogout, on
         )}
       </View>
 
-      {error ? <Text style={s.errorText}>{error}</Text> : null}
+      {error !== '' && <Text style={s.error}>{error}</Text>}
 
-      <TouchableOpacity style={s.refresh} onPress={onOpenStatus}>
-        <Text style={s.refreshText}>My status &amp; license</Text>
+      {/* ← T4: verified drivers get the same link (trip screen stays the trip screen) */}
+      {onOpenStatus && (
+        <TouchableOpacity onPress={onOpenStatus}>
+          <Text style={s.refresh}>My status &amp; license</Text>
+        </TouchableOpacity>
+      )}
+
+      <TouchableOpacity onPress={loadProfile}>
+        <Text style={s.refresh}>Refresh status</Text>
       </TouchableOpacity>
     </ScrollView>
   );
 }
 
 const s = StyleSheet.create({
-  flex: { flex: 1 },
-  container: { padding: 20, paddingBottom: 40, justifyContent: 'center', flexGrow: 1 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  screen: { flex: 1 },
+  container: { flexGrow: 1, justifyContent: 'center', padding: 24 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingTop: 56,
     paddingBottom: 8,
   },
-  headerTitle: { color: '#e2e8f0', fontSize: 16, fontWeight: '600' },
-  headerAction: { color: '#f59e0b', fontSize: 14, fontWeight: '600' },
+  headerTitle: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  headerAction: { color: '#a5f3fc', fontSize: 14, fontWeight: '600' },
   card: {
-    backgroundColor: '#1e293b',
-    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(191,219,254,0.7)',
     borderWidth: 1,
-    borderColor: '#334155',
-    padding: 18,
-    marginBottom: 14,
-    width: '100%',
-    maxWidth: 480,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
   },
-  cardTitle: { color: '#f8fafc', fontSize: 17, fontWeight: '700', marginBottom: 8 },
-  cardText: { color: '#cbd5e1', fontSize: 14, lineHeight: 21, marginBottom: 4 },
-  action: { marginTop: 12, width: '100%', maxWidth: 480 },
-  errorText: { color: '#fca5a5', fontSize: 14, lineHeight: 21, textAlign: 'center', marginBottom: 12 },
-  refresh: { alignSelf: 'center', paddingVertical: 10 },
-  refreshText: { color: '#f59e0b', fontSize: 14, fontWeight: '600' },
+  cardTitle: { color: '#fff', fontSize: 18, fontWeight: '700', marginBottom: 6 },
+  cardText: { color: '#e0f2fe', fontSize: 14, lineHeight: 20 },
+  action: { marginTop: 12 },
+  error: { color: '#fecaca', textAlign: 'center', marginBottom: 12 },
+  refresh: { color: '#a5f3fc', textAlign: 'center', marginTop: 20 },
 });
