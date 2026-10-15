@@ -5,11 +5,13 @@ import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import HomeScreen from './screens/HomeScreen';
 import DriverTripScreen from './screens/DriverTripScreen';
+import DriverStatusScreen from './screens/DriverStatusScreen'; // ← T4
 
 export default function App() {
   const [loading, setLoading] = useState(true);
   const [screen, setScreen] = useState('login'); // 'login' | 'register'
   const [session, setSession] = useState(null);  // { token, role }
+  const [driverView, setDriverView] = useState('trip'); // ← T4: 'trip' | 'status'
 
   useEffect(() => {
     (async () => {
@@ -32,6 +34,7 @@ export default function App() {
   async function handleLogout() {
     await SecureStore.deleteItemAsync('bb_token');
     await SecureStore.deleteItemAsync('bb_role');
+    setDriverView('trip'); // ← T4: next login starts on the trip screen, not the status screen
     setSession(null);
     setScreen('login');
   }
@@ -42,11 +45,23 @@ export default function App() {
 
   if (session) {
     if (session.role === 'driver') {
+      // ← T4: the driver branch now has two screens
+      if (driverView === 'status') {
+        return (
+          <DriverStatusScreen
+            token={session.token}
+            onBack={() => setDriverView('trip')}
+            onLogout={handleLogout}
+            onSessionExpired={handleLogout}
+          />
+        );
+      }
       return (
         <DriverTripScreen
           token={session.token}
           onSessionExpired={handleLogout}
           onLogout={handleLogout}
+          onOpenStatus={() => setDriverView('status')}
         />
       );
     }

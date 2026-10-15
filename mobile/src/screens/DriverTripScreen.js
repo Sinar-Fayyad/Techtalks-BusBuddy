@@ -239,6 +239,13 @@ export default function DriverTripScreen({ token, onSessionExpired, onLogout, on
         </TouchableOpacity>
       )}
 
+      {/* ← T4: verified drivers get the same link (trip screen stays the trip screen) */}
+      {onOpenStatus && (
+        <TouchableOpacity onPress={onOpenStatus}>
+          <Text style={s.refresh}>My status & license</Text>
+        </TouchableOpacity>
+      )}
+
       <TouchableOpacity onPress={loadProfile}>
         <Text style={s.refresh}>Refresh status</Text>
       </TouchableOpacity>
