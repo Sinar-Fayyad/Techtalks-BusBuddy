@@ -75,3 +75,92 @@ Format (the end-of-task prompt already generates this — just paste it):
 - Files added/changed
 - Tested: success + error cases
 - Gotchas for others (or "none")
+
+## 2026-10-15 — Jad Kamal El Dine — T4 — Driver status parity + back/logout
+
+- Rewrote `DriverStatusScreen` to work with this app's hand-rolled navigation: it takes
+  `token` / `onBack` / `onLogout` / `onSessionExpired` props instead of a `navigation`
+  object, uses the shared `apiFetch` helper, and reads driver status from contract
+  entry 6 (`GET /driver/me`). Added an Android `BackHandler` listener so hardware back
+  and the on-screen Back button do the same thing, plus a Log out control wired to
+  `App.js`'s existing `handleLogout`.
+- Wired the screen into the driver flow in `App.js` through a `driverView` state
+  (`'trip' | 'status'`), reached by a "My status & license" link on the trip screen.
+  Before this the screen was unreachable — a driver always landed on `DriverTripScreen`.
+- New/changed: `mobile/src/screens/DriverStatusScreen.js` (rewritten), `mobile/App.js`,
+  `mobile/src/screens/DriverTripScreen.js`, `mobile/api.js` (exports `BASE_URL`).
+  Endpoints used: entry 6 `GET /driver/me`, entry 8 `GET /driver/license/{name}`
+  (Bearer header; filename derived from `license_url`). No endpoints, DB tables or
+  components added. No contract or schema change.
+- Tested: verified driver shows ✓ Verified and the license file opens; pending → ⏳ Pending
+  approval; rejected → ✗ Rejected with no reason line; no profile (404) → "No driver
+  profile" state; invalid/expired token → returns to Login; on-screen Back and Android
+  hardware back both return to the trip screen; Log out clears `bb_token`/`bb_role` and
+  Login does not allow hardware back into the app.
+- Gotchas: (1) contract entry 6 returns no `rejection_reason` field, so no rejection
+  reason can be shown without a schema + contract change; (2) the scaffold this started
+  from called `/api/driver/status` and `/api/driver/license`, neither of which exists —
+  the real entries are 6 and 8; (3) on Expo SDK 54+ the classic file-system API lives in
+  `expo-file-system/legacy` (`getContentUriAsync` does not exist in the new API);
+  (4) this app has no navigation library — screens receive callbacks as props, so
+  `navigation.*` calls silently do nothing.
+  
+  ## 2026-10-15 — Jad Kamal El Dine — T5 — Driver home parity (My trips)
+
+- Added a "My trips" list to the driver home: the last 5 trips, newest first, from contract
+  entry 18 (`GET /driver/trips`), showing `start → end` per row and "Active" while
+  `end_time` is null. The list refreshes after a trip starts or stops, including the
+  409 (already on a trip) and 404 (nothing to stop) sync branches.
+- Added a `fmtTime` helper that converts the API's UTC timestamps to local time, tolerating
+  both ISO (`…Z`) and MySQL `YYYY-MM-DD HH:MM:SS` formats, and used it for the "last trip"
+  line too.
+- New/changed: `web/app/driver/home/page.tsx` (My trips section, trips state, `loadTrips`,
+  refresh calls after start/stop, `fmtTime`) and `mobile/src/screens/DriverTripScreen.js`
+  (My trips card + `loadTrips`), with `mobile/App.js` and `mobile/api.js` (`BASE_URL`
+  export) touched for the same flow. Endpoints used: entry 18, plus existing 6/9/10/13.
+  No endpoints, DB tables or components added. No contract or schema change.
+- Tested: verified driver sees the My trips list matching
+  `SELECT id, start_time, end_time FROM trips WHERE driver_id=<id> ORDER BY id DESC LIMIT 5;`
+  with the active trip marked "Active"; Start adds a row and flips the button to Stop; Stop
+  sets `end_time` and updates the row without a reload; double Start shows the 409 message
+  and flips to Stop; Stop with no active trip shows the 404 message; the three base-AC
+  features were re-checked intact — Start/Stop, GpsShare (location keeps posting for the
+  active trip and stops when the trip stops) and My Trips.
+- Gotchas: (1) the AC named "My Trips" as an existing feature, but the web driver home had
+  no trip history at all before this change — the feature was added, not preserved;
+  (2) mobile has no GpsShare by design (GPS sharing is web-only), so "parity" cannot mean
+  feature-identical screens; (3) entry 18 returns only the last 5 trips — a full history
+  page is a separate task; (4) a `ScrollView`'s `contentContainerStyle` needs `flexGrow`
+  rather than `flex`, or added cards clip instead of scrolling; (5) the T5 branch was cut
+  before T4 merged, which caused merge conflicts in the driver screens — resolve by keeping
+  dev's styles and re-applying only the T5 additions.
+
+  ## 2026-10-15 — Jad Kamal El Dine — T6 — Mobile screen parity (buffer / drop-safe)
+
+- Made the mobile screens survive slow or failed requests and rapid taps: `apiFetch` now uses
+  an `AbortController` with a 10s timeout and never throws — on timeout or network failure it
+  resolves `{ status: 0, ok: false }`, so a hung server can no longer leave a screen spinning.
+- Added unmount guards (`alive` ref) and in-flight gates to both driver screens, so responses
+  that land after Back/Log out no longer call `setState`, and repeated taps on
+  Start/Stop/Refresh collapse into a single request. Status refresh is now silent: it keeps
+  the content on screen and reports failure inline instead of blanking to a spinner.
+- Hardened `App.js`: `handleLogout` uses `try/finally` so a SecureStore failure cannot strand
+  the session, `handleLogin` sets the session even if the keychain write fails, and the
+  screen callbacks are `useCallback`-stable so the status screen's `BackHandler` effect stops
+  re-subscribing every render. A malformed 200 (missing `driver`) falls back to the
+  "No driver profile" view instead of crashing on destructuring.
+- New/changed: `mobile/api.js`, `mobile/App.js`, `mobile/src/screens/DriverStatusScreen.js`,
+  `mobile/src/screens/DriverTripScreen.js`. No endpoints, DB tables or components added.
+  No contract or schema change.
+- Tested: in Expo Go against a slowed/hung API — spinner then the error state with Retry, no
+  crash; Start tapped 5× fast → one POST and one new `trips` row; Refresh tapped 5× fast →
+  one request with the content never blanking; Back pressed while a request was in flight →
+  no "unmounted component" warning and no crash; repeated Android hardware back during a
+  refresh → app never closes; airplane mode then Retry → error state twice, recovers;
+  malformed 200 body → "No driver profile" instead of a red screen.
+- Gotchas: (1) `BASE_URL` must be exported from `api.js` — `DriverStatusScreen` imports it,
+  and if it is undefined the license download requests `undefined/api/driver/license/...`;
+  (2) a physical phone cannot reach `localhost`, so `BASE_URL` needs the PC's LAN IP
+  (Android emulator `10.0.2.2`, iOS simulator `localhost`); (3) changing `api.js` requires
+  `npx expo start -c` because Metro caches that module; (4) `apiFetch`'s timeout path returns
+  `status: 0`, deliberately not a real HTTP code, so existing `!r.ok` handling catches it.
