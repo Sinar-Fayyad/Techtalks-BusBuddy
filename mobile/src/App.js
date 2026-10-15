@@ -1,17 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import HomeScreen from './screens/HomeScreen';
 import DriverTripScreen from './screens/DriverTripScreen';
-import DriverStatusScreen from './screens/DriverStatusScreen'; // ← T4
+import DriverStatusScreen from './screens/DriverStatusScreen';
 
 export default function App() {
   const [loading, setLoading] = useState(true);
   const [screen, setScreen] = useState('login'); // 'login' | 'register'
   const [session, setSession] = useState(null);  // { token, role }
-  const [driverView, setDriverView] = useState('trip'); // ← T4: 'trip' | 'status'
+  const [driverView, setDriverView] = useState('trip'); // 'trip' | 'status'
 
   useEffect(() => {
     (async () => {
@@ -25,19 +25,36 @@ export default function App() {
     })();
   }, []);
 
-  async function handleLogin(token, role) {
-    await SecureStore.setItemAsync('bb_token', token);
-    await SecureStore.setItemAsync('bb_role', role);
+  // ← T6: a slow or failing keychain write must not strand the user on Login
+  const handleLogin = useCallback(async (token, role) => {
+    try {
+      await SecureStore.setItemAsync('bb_token', token);
+      await SecureStore.setItemAsync('bb_role', role);
+    } catch (e) {
+      console.error('Could not persist session', e);
+    }
     setSession({ token, role });
-  }
+  }, []);
 
-  async function handleLogout() {
-    await SecureStore.deleteItemAsync('bb_token');
-    await SecureStore.deleteItemAsync('bb_role');
-    setDriverView('trip'); // ← T4: next login starts on the trip screen, not the status screen
-    setSession(null);
-    setScreen('login');
-  }
+  // ← T6: try/finally — the session always clears, even if SecureStore throws
+  const handleLogout = useCallback(async () => {
+    try {
+      await SecureStore.deleteItemAsync('bb_token');
+      await SecureStore.deleteItemAsync('bb_role');
+    } catch (e) {
+      console.error('Could not clear stored session', e);
+    } finally {
+      setDriverView('trip');
+      setSession(null);
+      setScreen('login');
+    }
+  }, []);
+
+  // ← T6: stable identities — these feed a BackHandler effect downstream
+  const openStatus = useCallback(() => setDriverView('status'), []);
+  const closeStatus = useCallback(() => setDriverView('trip'), []);
+  const goRegister = useCallback(() => setScreen('register'), []);
+  const goLogin = useCallback(() => setScreen('login'), []);
 
   if (loading) {
     return <View style={s.center}><ActivityIndicator size="large" color="#f59e0b" /></View>;
@@ -45,12 +62,11 @@ export default function App() {
 
   if (session) {
     if (session.role === 'driver') {
-      // ← T4: the driver branch now has two screens
       if (driverView === 'status') {
         return (
           <DriverStatusScreen
             token={session.token}
-            onBack={() => setDriverView('trip')}
+            onBack={closeStatus}
             onLogout={handleLogout}
             onSessionExpired={handleLogout}
           />
@@ -61,7 +77,7 @@ export default function App() {
           token={session.token}
           onSessionExpired={handleLogout}
           onLogout={handleLogout}
-          onOpenStatus={() => setDriverView('status')}
+          onOpenStatus={openStatus}
         />
       );
     }
@@ -69,8 +85,8 @@ export default function App() {
   }
 
   return screen === 'register'
-    ? <RegisterScreen onBack={() => setScreen('login')} />
-    : <LoginScreen onLogin={handleLogin} onGoRegister={() => setScreen('register')} />;
+    ? <RegisterScreen onBack={goLogin} />
+    : <LoginScreen onLogin={handleLogin} onGoRegister={goRegister} />;
 }
 
 const s = StyleSheet.create({

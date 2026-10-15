@@ -1,25 +1,53 @@
-export const BASE_URL = 'http://192.168.2.165:3000'; // ← ipconfig IPv4 if different
+// mobile/api.js
+// apiFetch(path, token, options) → { status, ok, data }  (never throws)
+// ← T6: request timeout + AbortController + always resolve to a value
 
-export async function loginRequest(email, password) {
-  const res = await fetch(`${BASE_URL}/api/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  });
-  const data = await res.json().catch(() => ({}));
-  return { ok: res.status === 200, status: res.status, data };
-}
+// Expo Go reads EXPO_PUBLIC_* at bundle time; the fallback is your PC's LAN IP.
+export const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.20:3000';
 
-// NEW — one helper for every logged-in call: adds the Bearer token for us.
+const DEFAULT_TIMEOUT_MS = 10000;
+
 export async function apiFetch(path, token, options = {}) {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      ...(options.headers || {}),
-    },
-  });
-  const data = await res.json().catch(() => ({}));
-  return { ok: res.status >= 200 && res.status < 300, status: res.status, data };
+  // options may carry timeoutMs alongside normal fetch options
+  const { timeoutMs = DEFAULT_TIMEOUT_MS, headers, body, ...rest } = options || {};
+
+  // Callers sometimes pass a plain object, sometimes an already-stringified body.
+  const payload =
+    body === undefined || body === null
+      ? undefined
+      : typeof body === 'string'
+        ? body
+        : JSON.stringify(body);
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(`${BASE_URL.replace(/\/$/, '')}${path}`, {
+      ...rest,
+      body: payload,
+      signal: controller.signal,
+      headers: {
+        Accept: 'application/json',
+        ...(payload !== undefined ? { 'Content-Type': 'application/json' } : null),
+        ...(headers || {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : null),
+      },
+    });
+
+    let data = {};
+    try {
+      data = await res.json();
+    } catch {
+      data = {}; // 204 / non-JSON body → callers still get a usable object
+    }
+
+    return { status: res.status, ok: res.ok, data };
+  } catch (e) {
+    // Timeout, DNS failure, server down, or abort → a normal value, never a throw.
+    // status 0 is deliberately not a real HTTP code, so every caller's `!r.ok` path fires.
+    return { status: 0, ok: false, data: { error: 'Network request failed or timed out' } };
+  } finally {
+    clearTimeout(timer);
+  }
 }
