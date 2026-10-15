@@ -1,150 +1,204 @@
 import React, { useEffect, useState } from "react";
 import {
-  View, Text, StyleSheet, ScrollView, ActivityIndicator, Pressable, Alert,
+  View, Text, StyleSheet, ScrollView, ActivityIndicator, Pressable, Alert, BackHandler, Platform,
 } from "react-native";
-import * as SecureStore from "expo-secure-store";
-import * as FileSystem from "expo-file-system";
+import { LinearGradient } from "expo-linear-gradient";
+// SDK 54+ → "expo-file-system/legacy"; on SDK ≤53 → "expo-file-system"
+import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
-import Button from "../components/Button"; // ① match the real relative path in your project
+import { apiFetch, BASE_URL } from "../../api"; // ← same path apiFetch uses in DriverTripScreen
+import Button from "../components/Button";
 
-// ② REPLACE both with the real endpoints from API_CONTRACT.md (Step 1)
-const STATUS_URL = "/api/driver/status";
-const LICENSE_URL = "/api/driver/license"; // e.g. /api/license/:id — CHECK THE CONTRACT
-
-// ③ Match these to DriverTripScreen.js (BASE_URL import + SecureStore key names)
-import { BASE_URL } from "../config";
-
-const TOKEN_KEY = "bb_token"; // ④ check DriverTripScreen — must match
-
-export default function DriverStatusScreen({ navigation }) {
-  const [status, setStatus] = useState("pending");
-  const [license, setLicense] = useState(null); // { id, filename } — adapt to contract fields
-  const [reason, setReason] = useState("");
-  const [loading, setLoading] = useState(true);
+// Props mirror DriverTripScreen: this app has no navigator, screens get callbacks.
+export default function DriverStatusScreen({ token, onBack, onLogout, onSessionExpired }) {
+  const [view, setView] = useState("loading"); // loading | ready | none | error
+  const [driver, setDriver] = useState(null);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState("");
 
-  // 401 anywhere → clear session → login (same as DriverTripScreen)
-  const handle401 = async () => {
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
-    // ⑤ also clear role key if your app stores one (check DriverTripScreen)
-    navigation.replace("Login"); // ⑥ match how DriverTripScreen routes on 401
-  };
-
-  const loadStatus = async () => {
+  async function loadStatus() {
+    setError("");
+    setView("loading");
     try {
-      setLoading(true);
-      setError("");
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      if (!token) return handle401();
-
-      const res = await fetch(`${BASE_URL}${STATUS_URL}`, {
-        method: "GET",
-        headers: { Authorization: `Bearer ${token}` }, // Bearer-header only — contract rule
-      });
-      if (res.status === 401) return handle401();
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to load status");
-      }
-      // ⑦ ADAPT these three lines to the real response shape (write it down from the contract)
-      setStatus(data.driver.status);
-      setLicense(data.driver.license ?? null);
-      setReason(data.driver.rejection_reason ?? "");
+      // Contract entry 6 — the caller's own driver row, found from the token.
+      const me = await apiFetch("/api/driver/me", token);
+      if (me.status === 401) return onSessionExpired();
+      if (me.status === 404) return setView("none"); // no driver profile yet
+      if (!me.ok) throw new Error(`status ${me.status}`);
+      setDriver(me.data.driver);
+      setView("ready");
     } catch (e) {
-      setError(e.message);
       console.error(e);
-    } finally {
-      setLoading(false);
+      setView("error");
+      setError("Cannot reach the server. Check Wi-Fi and that the web server is running.");
     }
-  };
+  }
 
   useEffect(() => {
     loadStatus();
   }, []);
 
-  const openLicense = async () => {
-    if (!license) return;
+  // Android hardware back behaves exactly like the on-screen Back button.
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      onBack();
+      return true; // handled → don't close the app
+    });
+    return () => sub.remove();
+  }, [onBack]);
+
+  // license_url looks like "/uploads/license_12.pdf" (entry 7) → keep only the file name.
+  const licenseName = driver && driver.license_url ? driver.license_url.split("/").pop() : null;
+
+  async function openLicense() {
+    if (!licenseName) return;
     try {
       setDownloading(true);
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      const name = license.filename || "license-file";
-      const fileUri = `${FileSystem.cacheDirectory}${name}`;
-
-      const { uri, status: dl } = await FileSystem.downloadAsync(
-        `${BASE_URL}${LICENSE_URL}`,
+      setError("");
+      const fileUri = `${FileSystem.cacheDirectory}${licenseName}`;
+      // Entry 8 needs the Bearer header — fine in a native download (that's why web needs lib/view-license.ts).
+      const { uri, status } = await FileSystem.downloadAsync(
+        `${BASE_URL}/api/driver/license/${licenseName}`,
         fileUri,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      if (dl !== 200) throw new Error("License download failed");
+      if (status !== 200) throw new Error(`License download failed (${status})`);
 
-      const target = await FileSystem.getContentUriAsync(uri);
-      if (!(await Sharing.isAvailableAsync())) {
+      if (await Sharing.isAvailableAsync()) {
+        // getContentUriAsync is Android-only.
+        const shareUri = Platform.OS === "android" ? await FileSystem.getContentUriAsync(uri) : uri;
+        await Sharing.shareAsync(shareUri);
+      } else {
         Alert.alert("License downloaded", uri);
-        return;
       }
-      await Sharing.shareAsync(target);
     } catch (e) {
-      setError(e.message);
       console.error(e);
+      setError("Could not open the license file.");
     } finally {
       setDownloading(false);
     }
-  };
+  }
 
-  if (loading) {
+  // Same gradient + logout shell as DriverTripScreen; the Back button sits next to Log out.
+  function shell(content) {
     return (
+      <LinearGradient
+        colors={["#06b6d4", "#3b82f6", "#a855f7"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={s.flex}
+      >
+        <View style={s.header}>
+          <Pressable onPress={onBack} style={s.headerBtn}>
+            <Text style={s.headerBtnText}>‹ Back</Text>
+          </Pressable>
+          <Pressable onPress={onLogout} style={s.headerBtn}>
+            <Text style={s.headerBtnText}>Log out</Text>
+          </Pressable>
+        </View>
+        {content}
+      </LinearGradient>
+    );
+  }
+
+  if (view === "loading") {
+    return shell(
       <View style={s.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color="#fff" />
       </View>
     );
   }
 
-  return (
-    <ScrollView contentContainerStyle={s.wrap}>
-      <Text style={s.title}>Driver status</Text>
-      {error ? <Text style={s.error}>{error}</Text> : null}
+  if (view === "error") {
+    return shell(
+      <View style={s.container}>
+        <Text style={s.title}>Driver status</Text>
+        <View style={[s.card, s.cardRed]}>
+          <Text style={s.cardTitle}>Connection problem</Text>
+          <Text style={s.cardText}>{error}</Text>
+        </View>
+        <Button label="Retry" onPress={loadStatus} style={s.button} textStyle={s.buttonText} />
+      </View>
+    );
+  }
 
-      <View style={[s.badge, status === "verified" && s.badgeGreen, status === "pending" && s.badgeAmber, status === "rejected" && s.badgeRed]}>
-        <Text style={s.badgeText}>
-          {status === "verified" ? "✓ Verified" : status === "pending" ? "⏳ Pending approval" : "✗ Rejected"}
-        </Text>
+  if (view === "none") {
+    return shell(
+      <View style={s.container}>
+        <Text style={s.title}>Driver status</Text>
+        <View style={s.card}>
+          <Text style={s.cardTitle}>No driver profile</Text>
+          <Text style={s.cardText}>
+            Your account has no driver profile yet. Register a driver profile with your license to get verified.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  const { status, name, email } = driver;
+  const badge =
+    status === "verified"
+      ? { label: "✓ Verified", style: s.badgeGreen }
+      : status === "rejected"
+      ? { label: "✗ Rejected", style: s.badgeRed }
+      : { label: "⏳ Pending approval", style: s.badgeAmber };
+
+  return shell(
+    <View style={s.container}>
+      <Text style={s.title}>Driver status</Text>
+
+      <View style={[s.badge, badge.style]}>
+        <Text style={s.badgeText}>{badge.label}</Text>
       </View>
 
-      {status === "rejected" && reason ? (
-        <Text style={s.reason}>Reason: {reason}</Text>
-      ) : null}
+      <View style={s.card}>
+        <Text style={s.cardTitle}>{name}</Text>
+        <Text style={s.cardText}>{email}</Text>
+      </View>
 
-      {license ? (
-        <Pressable style={s.licenseCard} onPress={openLicense}>
-          <Text style={s.licenseName}>📄 {license.filename}</Text>
-          <Text style={s.licenseHint}>
-            {downloading ? "Opening…" : "Tap to view"}
-          </Text>
+      {error !== "" && <Text style={s.error}>{error}</Text>}
+
+      {licenseName ? (
+        <Pressable style={s.card} onPress={openLicense} disabled={downloading}>
+          <Text style={s.cardTitle}>📄 {licenseName}</Text>
+          <Text style={s.cardText}>{downloading ? "Opening…" : "Tap to view"}</Text>
         </Pressable>
       ) : (
-        <Text style={s.muted}>No license file on record.</Text>
+        <Text style={s.subtitle}>No license file on record.</Text>
       )}
 
-      <Button title="Back" onPress={() => navigation.goBack?.() ?? navigation.navigate("Home")} />
-    </ScrollView>
+      <Button label="Refresh" onPress={loadStatus} style={s.button} textStyle={s.buttonText} />
+    </View>
   );
 }
 
 const s = StyleSheet.create({
+  flex: { flex: 1 },
+  header: { flexDirection: "row", justifyContent: "space-between", marginTop: 40, paddingHorizontal: 24 },
+  headerBtn: { backgroundColor: "rgba(15,23,42,0.85)", borderRadius: 20, paddingVertical: 8, paddingHorizontal: 18 },
+  headerBtnText: { color: "#fff", fontWeight: "600", fontSize: 14 },
+  container: { flex: 1, justifyContent: "center", padding: 24 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  wrap: { padding: 20, gap: 14 },
-  title: { fontSize: 24, fontWeight: "700" },
-  error: { color: "#b00020" },
-  badge: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10, alignSelf: "flex-start" },
+  title: { color: "#fff", fontSize: 28, fontWeight: "700", textAlign: "center", marginBottom: 20 },
+  subtitle: { color: "#e0f2fe", textAlign: "center", marginBottom: 16 },
+  card: {
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderColor: "rgba(191,219,254,0.7)",
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+  },
+  cardRed: { borderColor: "#fca5a5" },
+  cardTitle: { color: "#fff", fontSize: 18, fontWeight: "700", marginBottom: 6 },
+  cardText: { color: "#e0f2fe", fontSize: 14, lineHeight: 20 },
+  badge: { alignSelf: "center", paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20, marginBottom: 16 },
   badgeGreen: { backgroundColor: "#e3f7e8" },
   badgeAmber: { backgroundColor: "#fdf2d9" },
   badgeRed: { backgroundColor: "#fde3e3" },
-  badgeText: { fontWeight: "600" },
-  reason: { color: "#b00020" },
-  licenseCard: { borderWidth: 1, borderColor: "#ccc", borderRadius: 10, padding: 14 },
-  licenseName: { fontWeight: "600" },
-  licenseHint: { color: "#555", marginTop: 4 },
-  muted: { color: "#777" },
+  badgeText: { fontWeight: "700" },
+  error: { color: "#fecaca", textAlign: "center", marginBottom: 12 },
+  button: { backgroundColor: "#0f172a", borderRadius: 24, paddingVertical: 14, alignItems: "center", marginTop: 4 },
+  buttonText: { color: "#fff", fontWeight: "700", fontSize: 16 },
 });

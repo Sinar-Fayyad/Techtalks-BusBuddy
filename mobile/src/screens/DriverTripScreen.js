@@ -5,7 +5,8 @@ import { apiFetch } from '../../api';
 import Button from '../components/Button';
 
 // view: 'loading' | 'none' | 'pending' | 'rejected' | 'ready' | 'error'
-export default function DriverTripScreen({ token, onSessionExpired, onLogout }) {
+// ← T4: onOpenStatus lets App.js switch to the driver status screen
+export default function DriverTripScreen({ token, onSessionExpired, onLogout, onOpenStatus }) {
   const [view, setView] = useState('loading');
   const [trip, setTrip] = useState(null); // active trip or null
   const [busy, setBusy] = useState(false); // Start/Stop in flight
@@ -132,6 +133,13 @@ export default function DriverTripScreen({ token, onSessionExpired, onLogout }) 
           <Text style={s.cardText}>{msg[1]}</Text>
         </View>
         {error !== '' && <Text style={s.error}>{error}</Text>}
+
+        {/* ← T4: same entry point from every view, so pending/rejected drivers can see their status + license */}
+        {onOpenStatus && (
+          <TouchableOpacity onPress={onOpenStatus}>
+            <Text style={s.refresh}>My status & license</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   }
@@ -156,6 +164,13 @@ export default function DriverTripScreen({ token, onSessionExpired, onLogout }) 
         <Button label="Stop trip" onPress={stopTrip} loading={busy} style={s.button} textStyle={s.buttonText} />
       ) : (
         <Button label="Start trip" onPress={startTrip} loading={busy} style={s.button} textStyle={s.buttonText} />
+      )}
+
+      {/* ← T4: verified drivers get the same link (trip screen stays the trip screen) */}
+      {onOpenStatus && (
+        <TouchableOpacity onPress={onOpenStatus}>
+          <Text style={s.refresh}>My status & license</Text>
+        </TouchableOpacity>
       )}
 
       <TouchableOpacity onPress={loadProfile}>
