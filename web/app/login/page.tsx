@@ -100,11 +100,11 @@ export default function LoginPage() {
               </span>
               <input
                 className={styles.input}
-                type='email'
-                placeholder='Email'
+                type="email"
+                placeholder="Email"
                 value={form.email}
                 onChange={set('email')}
-                aria-label='Email'
+                aria-label="Email"
                 aria-invalid={!!fieldError.email}
               />
             </div>
@@ -121,14 +121,14 @@ export default function LoginPage() {
               <input
                 className={styles.input}
                 type={showPw ? 'text' : 'password'}
-                placeholder='Password'
+                placeholder="Password"
                 value={form.password}
                 onChange={set('password')}
-                aria-label='Password'
+                aria-label="Password"
                 aria-invalid={!!fieldError.password}
               />
               <button
-                type='button'
+                type="button"
                 className={styles.eyeBtn}
                 aria-label={showPw ? 'Hide password' : 'Show password'}
                 onClick={() => setShowPw(!showPw)}
@@ -142,7 +142,7 @@ export default function LoginPage() {
           )}
 
           <button
-            type='submit'
+            type="submit"
             className={styles.submit}
             disabled={loading}
           >
@@ -154,7 +154,7 @@ export default function LoginPage() {
         <ErrorMessage message={error} />
         <p className={styles.createAccount}>
           Don't have an account?{' '}
-          <a href='/driver/register'>Create Account</a>
+          <a href="/driver/register">Create Account</a>
         </p>
       </div>
     </main>

@@ -7,55 +7,58 @@ import { useAuth } from '../../auth-context';
 import ErrorMessage from '@/components/ErrorMessage';
 
 export default function StudentRegisterPage() {
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [form, setForm] = useState({
+    name: '',
+    phone: '',
+    password: '',
+  });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const router = useRouter();
   const { login } = useAuth();
 
-  const set = (key: 'name' | 'email' | 'password') => (e: ChangeEvent<HTMLInputElement>) =>
-    setForm((current) => ({ ...current, [key]: e.target.value }));
+  const set = (key: 'name' | 'phone' | 'password') =>
+    (e: ChangeEvent<HTMLInputElement>) =>
+      setForm((current) => ({ ...current, [key]: e.target.value }));
 
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
 
     const name = form.name.trim();
-    const email = form.email.trim();
+    const phone = form.phone.trim();
+    const password = form.password;
 
-    // 1) Client validation — ALL errors go through the shared Error component (decision a)
-    if (!name || !email || !form.password) {
+    if (!name || !phone || !password) {
       setError('Please fill in all fields');
       return;
     }
-    if (!/\S+@\S+\.\S+/.test(email)) {
-      setError('Enter a valid email');
+
+    if (!/^\d{7,12}$/.test(phone.replace(/[\s\-()]/g, ''))) {
+      setError('Enter a valid phone number');
       return;
     }
 
     setLoading(true);
 
     try {
-      // 2) Signup — entry 1 of the contract, role fixed to student
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password: form.password, role: 'student' }),
+        body: JSON.stringify({ name, email: '', password, phone, university: '', role: 'student' }),
       });
       const data = await res.json();
 
       if (!res.ok) {
-        // 400 missing fields · 409 email exists · 403 admin (never sent here) · 500
         setError(data.error ?? data.message ?? 'Signup failed — please try again');
-        return; // no login attempt on failure
+        return;
       }
 
-      // 3) Auto-login — entry 2 of the contract
       const loginRes = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password: form.password }),
+        body: JSON.stringify({ email: '', password }),
       });
       const loginData = await loginRes.json();
 
@@ -64,11 +67,10 @@ export default function StudentRegisterPage() {
         return;
       }
 
-      // 4) Save session (localStorage via auth-context → survives refresh) → home
       login(loginData.token, loginData.role);
       router.push('/student/home');
     } catch (err) {
-      console.error('Signup failed:', err); // convention: console.error
+      console.error('Signup failed:', err);
       setError('Server error — is the dev server running?');
     } finally {
       setLoading(false);
@@ -78,50 +80,88 @@ export default function StudentRegisterPage() {
   return (
     <main className={styles.page}>
       <div className={styles.card}>
-        <h1 className={styles.title}>Create Student Account</h1>
-        <p className={styles.subtitle}>Join BusBuddy to track your bus in real time</p>
+        <h1 className={styles.title}>Sign In</h1>
+        <p className={styles.subtitle}>
+          Enter your details to access
+          <br />
+          your student account.
+        </p>
 
-        <form onSubmit={submit} noValidate>
+        <form className={styles.form} onSubmit={submit} noValidate>
           <div className={styles.field}>
             <div className={styles.fieldInner}>
               <span className={styles.icon} aria-hidden>👤</span>
-              <input className={styles.input} type="text" placeholder="Full name"
-                value={form.name} onChange={set('name')}
-                aria-label="Full name" />
+              <input
+                className={styles.input}
+                type="text"
+                placeholder="Full Name"
+                value={form.name}
+                onChange={set('name')}
+                aria-label="Full Name"
+              />
             </div>
           </div>
 
           <div className={styles.field}>
             <div className={styles.fieldInner}>
-              <span className={styles.icon} aria-hidden>✉️</span>
-              <input className={styles.input} type="email" placeholder="Email"
-                value={form.email} onChange={set('email')}
-                aria-label="Email" />
+              <span className={styles.icon} aria-hidden>📱</span>
+              <input
+                className={styles.input}
+                type="tel"
+                placeholder="Phone Number"
+                value={form.phone}
+                onChange={set('phone')}
+                aria-label="Phone Number"
+              />
+              <span className={styles.inputHint}>+961 71 234 567</span>
             </div>
           </div>
 
           <div className={styles.field}>
             <div className={styles.fieldInner}>
               <span className={styles.icon} aria-hidden>🔒</span>
-              <input className={styles.input} type={showPw ? 'text' : 'password'}
-                placeholder="Password" value={form.password} onChange={set('password')}
-                aria-label="Password" />
-              <button type="button" className={styles.eyeBtn}
+              <input
+                className={styles.input}
+                type={showPw ? 'text' : 'password'}
+                placeholder="Password"
+                value={form.password}
+                onChange={set('password')}
+                aria-label="Password"
+              />
+              <button
+                type="button"
+                className={styles.eyeBtn}
                 aria-label={showPw ? 'Hide password' : 'Show password'}
-                onClick={() => setShowPw(!showPw)}>{showPw ? '🙈' : '👁️'}</button>
+                onClick={() => setShowPw(!showPw)}
+              >
+                {showPw ? '🙈' : '👁️'}
+              </button>
             </div>
           </div>
 
           <button type="submit" className={styles.submit} disabled={loading}>
-            {loading ? 'Creating account…' : 'Sign Up →'}
+            {loading ? 'Signing in…' : 'Sign In →'}
           </button>
         </form>
 
+        <div className={styles.orDivider}>
+          <span className={styles.orLine} />
+          <span className={styles.orText}>OR</span>
+          <span className={styles.orLine} />
+        </div>
+
+        <button type="button" className={styles.secondary}>
+          <span className={styles.secondaryIcon}>G</span>
+          Continue with Google
+        </button>
+
         <ErrorMessage message={error} />
 
-        <p className={styles.footerLink}>
-          Already have an account?{' '}
-          <a href="/login">Sign in</a>
+        <p className={styles.footer}>
+          Don&apos;t have an account?{' '}
+          <a href="/student/register" className={styles.footerLink}>
+            Sign up
+          </a>
         </p>
       </div>
     </main>

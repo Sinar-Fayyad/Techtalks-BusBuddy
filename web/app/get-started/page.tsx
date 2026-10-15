@@ -11,7 +11,6 @@ export default function GetStartedPage() {
   const router = useRouter();
   const { token, role, ready } = useAuth();
 
-  // Logged-in guard: already authenticated users skip the role chooser.
   useEffect(() => {
     if (isLoggedIn({ token, role })) {
       router.replace(ROLE_HOME[role!]);
@@ -20,17 +19,23 @@ export default function GetStartedPage() {
 
   return (
     <main className={styles.chooser}>
-      {/* Shared error slot: no async work on this page yet, so nothing to report. */}
       <ErrorMessage message={null} />
-      <div className={styles.chooserTop}>
+
+      <div className={styles.logo}>
         <div className={styles.brandIcon}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 21s7-6.5 7-11a7 7 0 1 0-14 0c0 4.5 7 11 7 11z" />
             <circle cx="12" cy="10" r="2.2" fill="currentColor" stroke="none" />
           </svg>
         </div>
-        <h1 className={styles.title}>Let&apos;s find your role</h1>
-        <p className={styles.tagline}>Pick where you fit in, then we&apos;ll get you signed in.</p>
+        <h1 className={styles.logoText}>
+          <span className={styles.logoTextAccent}>Bus</span>Buddy
+        </h1>
+      </div>
+
+      <div className={styles.header}>
+        <h2 className={styles.title}>Choose Your Role</h2>
+        <p className={styles.tagline}>Select the role that best describes you</p>
       </div>
 
       <section className={styles.cards}>
@@ -42,11 +47,11 @@ export default function GetStartedPage() {
               <circle cx="15.5" cy="14.5" r="1.6" fill="currentColor" stroke="none" />
             </svg>
           </div>
-          <h2 className={styles.cardName}>Driver</h2>
+          <h3 className={styles.cardName}>Driver</h3>
           <p className={styles.cardHint}>Pick up students, start/stop trips, share GPS</p>
         </Link>
 
-        <Link className={styles.card} href="/student/home">
+        <Link className={styles.card} href="/student/register">
           <div className={styles.cardIcon}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="9" cy="8" r="3" />
@@ -55,8 +60,8 @@ export default function GetStartedPage() {
               <circle cx="15" cy="6" r="2" fill="currentColor" stroke="none" />
             </svg>
           </div>
-          <h2 className={styles.cardName}>Student</h2>
-          <p className={styles.cardHint}>Join an active trip, watch the live map</p>
+          <h3 className={styles.cardName}>Student</h3>
+          <p className={styles.cardHint}>Ride to campus and beyond</p>
         </Link>
 
         <Link className={styles.card} href="/parent/home">
@@ -68,13 +73,19 @@ export default function GetStartedPage() {
               <circle cx="12" cy="16" r="1.6" fill="currentColor" stroke="none" />
             </svg>
           </div>
-          <h2 className={styles.cardName}>Parent</h2>
-          <p className={styles.cardHint}>Link your children, track their trips</p>
+          <h3 className={styles.cardName}>Parent</h3>
+          <p className={styles.cardHint}>Keep your loved ones safe</p>
         </Link>
       </section>
 
-      <div className={styles.nav}>
-        <Link href="/login" className={styles.navLink}>Already have an account? Log in</Link>
+      <div className={styles.actions}>
+        <Link href="/login" className={styles.navLink}>
+          Already have an account? Log in
+        </Link>
+
+        <Link className={styles.continue} href="/student/register">
+          Continue →
+        </Link>
       </div>
     </main>
   );
