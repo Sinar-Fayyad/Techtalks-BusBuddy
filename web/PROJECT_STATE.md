@@ -164,3 +164,29 @@ Format (the end-of-task prompt already generates this — just paste it):
   (Android emulator `10.0.2.2`, iOS simulator `localhost`); (3) changing `api.js` requires
   `npx expo start -c` because Metro caches that module; (4) `apiFetch`'s timeout path returns
   `status: 0`, deliberately not a real HTTP code, so existing `!r.ok` handling catches it.
+
+  ## 2026-10-16 — Tamara — T7 — Student home parity
+
+- Made the stale freshness indicator grey per T7 AC: the under-map line
+  ("⚠️ Last known position — updated Xs ago") flipped from amber
+  (var(--warning, #b45309) fallback) to var(--text-muted) (#6b7280) once
+  location data passes 30s old. One CSS line — no logic, polling, API,
+  contract or DB change; page.tsx untouched (30s/10s polling and "Updated Xs ago"
+  ticker re-verified intact; grey bus marker at 30s was already there from T12).
+- New/changed files: web/components/LeafletMap/LeafletMap.module.css
+  (.statusStale color line only). Endpoints: none. DB tables: none.
+  Components added: none. web/docs/TESTING.md Sprint 5 T7 table written in-chat —
+  append not confirmed by tester.
+- Tested (tester-reported "everything is working"): fresh baseline (blue marker,
+  ticking "Updated Xs ago", ~10s polls), grey flip at ~30s with trip still active
+  after cutting the driver's GPS feed, GPS resume returns blue, driver Stop →
+  "Trip completed" ≤30s + poll back to ~30s, logout stops polling, dev server off →
+  error card + Retry (recovers), new trip auto-detected from no-trip page ≤30s.
+  Exact DevTools computed color (expected rgb(107,114,128)) NOT recorded → unconfirmed.
+- Gotchas: (1) --warning does NOT exist in globals.css — the stale line had been
+  rendering the #b45309 amber fallback all along; (2) --grey (#F2F4F7) is a
+  light-background token — wrong for dark-card text, use --text-muted;
+  (3) seed.sql lives at web/database/seed.sql, NOT database/; (4) LeafletMap is a
+  shared component — every LiveBusMap consumer inherits the grey fix
+  (check with: findstr /s /i /m LiveBusMap web\app\*.tsx); (5) grey marker on the
+  bus icon at 30s was pre-existing (T12), this task only changed the TEXT color.
