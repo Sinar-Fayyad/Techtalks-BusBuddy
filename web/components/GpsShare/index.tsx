@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useAuth } from '@/app/auth-context'; // ⚠️ use the SAME import path your /driver/home page uses
-import Button from '@/components/Button'; // ⚠️ match your existing component imports
+import { useAuth } from '@/app/auth-context';
+import Button from '@/components/Button';
 import ErrorMessage from '@/components/ErrorMessage';
+import styles from './GpsShare.module.css';
 
 const SEND_INTERVAL_MS = 10_000; // contract: max 1 ping per 10 s
 const TICK_MS = 2_000; // how often we check if 10 s have passed
@@ -143,7 +144,7 @@ export default function GpsShare({ tripActive }: { tripActive: boolean }) {
     }
   };
 
-  if (!tripActive) return <p>Start a trip to share your location.</p>;
+  if (!tripActive) return <p className={styles.hint}>Start a trip to share your location.</p>;
 
   return (
     <section>
@@ -151,7 +152,7 @@ export default function GpsShare({ tripActive }: { tripActive: boolean }) {
         {sharing ? 'Stop sharing location' : 'Share location'}
       </Button>
       {sharing && (
-        <p>
+        <p className={styles.status}>
           Sending your position every 10 s ·{' '}
           {lastSent ? `last ping ${lastSent}` : 'waiting for first fix…'}
         </p>
