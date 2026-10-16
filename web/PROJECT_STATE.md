@@ -190,3 +190,46 @@ Format (the end-of-task prompt already generates this — just paste it):
   shared component — every LiveBusMap consumer inherits the grey fix
   (check with: findstr /s /i /m LiveBusMap web\app\*.tsx); (5) grey marker on the
   bus icon at 30s was pre-existing (T12), this task only changed the TEXT color.
+
+
+  ## 2026-10-16 — Sinar — GpsShare folder conversion
+
+- Moved `web/components/GpsShare.tsx` into its own folder as `web/components/GpsShare/index.tsx`
+  and added `GpsShare.module.css`, so the shared component follows the same convention as
+  Button / ErrorMessage / Input / LeafletMap / LiveBusMap. Because the file is now `index.tsx`,
+  the import specifier `@/components/GpsShare` still resolves — no consumer page needed editing.
+- New/changed: `web/components/GpsShare/index.tsx` (moved, imports the CSS module),
+  `web/components/GpsShare/GpsShare.module.css` (new); old `web/components/GpsShare.tsx` removed.
+  Endpoints/DB/tables unchanged. No contract or schema change.
+- Tested: `npm run build` compiles (proves the `index.tsx` resolution); driver-home GPS sharing
+  unchanged — Start a trip → "Share location" appears, sharing posts a ping every ~10 s and
+  `trips.latitude/longitude/location_updated_at` update; Stop auto-stops sharing; permission-denied
+  shows the permission message and Start/Stop still work.
+- Gotchas: (1) `index.tsx` is exactly what keeps `@/components/GpsShare` working — and it is NOT
+  the same as renaming a route file (App Router route files must stay `page.tsx`); (2) the
+  component had no styling of its own before, so the only visual change is its helper text now
+  using the muted token (`--bb-text-dim`) instead of inheriting white; (3) separate task/PR from
+  T8 — the parent home doesn't use GpsShare.
+
+  ## 2026-10-16 — Sinar — T8 — Parent home parity
+
+- Restyled `web/app/parent/home/page.tsx` to the Parent-Home mockup's language using only real
+  data: greeting header + "Tracking Active" banner (N children in transit); the children
+  chip-selector became a "My Children" card list (name, email, status badge); the selected
+  child's trip card keeps all three states (in transit / ended / no trip) plus an inline live
+  map while the trip is active. Same session guard, role check, entry-12 Add-child card and
+  401/!ok handling as before — presentation only.
+- New/changed: `web/app/parent/home/page.tsx` (restyled), `web/app/parent/home/page.module.css` (new).
+  Endpoints: entry 15 + entry 14 (now one call PER child so every row can badge + the banner can
+  count), entry 12 unchanged. No API/contract/schema change.
+- Tested: build passes; parent with children → cards + badges (In transit/Idle/Arrived) + banner
+  count; selecting a child swaps the trip card; active trip → live map; driver Stop + refresh →
+  badge flips to Arrived and the banner clears; no children → "No child linked" empty state; not
+  logged in → /login; driver/student → "Access denied"; dev server off → error + console.error.
+- Gotchas: (1) the parent NAME is unreachable — login stores only bb_token/bb_role and the JWT has
+  {userId, role}, so the greeting is generic (name is in users.name but no endpoint exposes it);
+  (2) badges + banner cost one entry-14 request per child (was one, for the selected child only);
+  (3) F3 unchanged — the Add-child card still 400s until entry 12 email mode is implemented;
+  (4) mockup items with no backend are intentionally omitted (school/next-stop/ETA/bus/driver/
+  rating, notifications, settings, sidebar/bottom nav, photos) — new endpoints first;
+  (5) added `fmtTime` (UTC→local) so trip times render correctly — same helper as driver home.
