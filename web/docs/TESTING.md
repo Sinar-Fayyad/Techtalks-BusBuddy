@@ -268,7 +268,20 @@ Environment: Windows · WAMP MySQL busbuddy_app (port 3308 per .env.local, root/
 - Environment gotcha (not an app bug): the preview browser's reload hung on "Checking session…" while the dev server was in a Turbopack HMR reconnect loop (its own log: "Turbopack's filesystem cache has been deleted because we previously detected an internal error"). Fresh full-page loads worked — W44 verified that way. Restart the dev server if HMR stalls.
 
 **Sprint 4 tally: W41 7/7 ✅ · W42 2✅ + 1⚠️ + 3❌ · W43 4/4 ✅ · W44 3/3 ✅ · W45 1✅ + 5❌ → 17 ✅ · 1 ⚠️ · 8 ❌.** F1 (T7) and F2/T9b (S4-T3) confirmed FIXED; new findings F3/F4/F5 logged → Sprint 5.
+## Sprint 5 — T7 student home freshness (2026-10-16)
 
+Environment: Windows · dev :3000 · branch feature/t7-student-home-parity · seed via web/database/seed.sql.
+
+| # | Test | Expected | Result |
+|---|------|----------|--------|
+| T7-1 | Baseline fresh state: driver sharing GPS → student home | Trip in progress, BLUE marker, "Updated Xs ago" ticking, ~10s polls | ✅ |
+| T7-2 | GPS feed cut (driver tab closed), trip still active | marker blue→grey + "⚠️ Last known position" at ~30s, no refresh | ✅ |
+| T7-3 | DevTools computed color of stale line | rgb(107, 114, 128) = #6b7280 (--text-muted), NOT amber | ✅ |
+| T7-4 | GPS resumes | marker back blue, ticker resets ≤10s | ✅ |
+| T7-5 | Driver stops trip | "Trip completed" ≤30s, map card gone, poll back to ~30s | ✅ |
+| T7-6 | Logout on student home | 0 further trip-status requests | ✅ |
+| T7-7 | Dev server off → Refresh | error card + Retry, no crash; Retry recovers | ✅ |
+| T7-8 | New trip detected from no-trip page | auto-flips ≤30s, no refresh (W43a) | ✅ |
 ---
 
 Testers: Sprint 0 + Sprint 1 — Sinar · Sprint 2 — Wassim · Sprint 3 — Sinar · Sprint 4 — Sinar
