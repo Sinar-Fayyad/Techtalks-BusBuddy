@@ -4,7 +4,7 @@ import { useAuth } from '../../auth-context';
 import Button from '@/components/Button';
 import ErrorMessage from '@/components/ErrorMessage';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import LiveBusMap from '@/components/LiveBusMap/LiveBusMap';
+import LiveBusMap from '@/components/LiveBusMap';
 
 interface TripInfo {
   id: number;
