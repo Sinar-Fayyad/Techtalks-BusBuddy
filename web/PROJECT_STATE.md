@@ -233,3 +233,7 @@ Format (the end-of-task prompt already generates this — just paste it):
   (4) mockup items with no backend are intentionally omitted (school/next-stop/ETA/bus/driver/
   rating, notifications, settings, sidebar/bottom nav, photos) — new endpoints first;
   (5) added `fmtTime` (UTC→local) so trip times render correctly — same helper as driver home.
+  (6) **there is NO way to disconnect a child** — the contract has no unlink endpoint (entry 12
+  only links, entry 15 only lists), so the UI deliberately has no Remove action. New contract
+  entry required first → tracked as Sprint 5 gap #8.
+  
