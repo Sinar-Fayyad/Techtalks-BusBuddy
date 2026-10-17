@@ -16,6 +16,13 @@ interface TripInfo {
   location_updated_at: string | null;
 }
 
+// API times are UTC strings with no "Z" (e.g. "2026-09-30 16:38:26.000").
+// Without the "Z", JS reads them as local time and shows the wrong hour.
+// Same logic as fmtTime on the driver/parent pages.
+function toDate(value: string) {
+  const raw = String(value);
+  return new Date(raw.replace(' ', 'T') + (raw.endsWith('Z') ? '' : 'Z'));
+}
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
@@ -151,7 +158,7 @@ export default function StudentHomePage() {
                 {active ? '🚌 Trip in progress' : '✅ Trip completed'}
               </span>
               <h2 style={{ margin: '0.9rem 0 0.25rem 0', fontSize: '2rem', fontWeight: 700 }}>
-                {new Date(active ? trip.start_time : trip.end_time!).toLocaleTimeString()}
+                {toDate(active ? trip.start_time : trip.end_time!).toLocaleTimeString() /* fixed */}
               </h2>
               <p style={{ margin: 0, color: 'var(--bb-text-dim)' }}>
                 {active ? 'Your bus is currently on the way.' : 'Your trip has been completed.'}
@@ -173,8 +180,8 @@ export default function StudentHomePage() {
             <section style={card}>
               <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '1.05rem', fontWeight: 700 }}>Trip Summary</h2>
               <Row label="Status" value={active ? 'Active' : 'Completed'} />
-              <Row label="Started" value={new Date(trip.start_time).toLocaleString()} />
-              {ended && <Row label="Ended" value={new Date(trip.end_time!).toLocaleString()} />}
+              <Row label="Started" value={toDate(trip.start_time).toLocaleString() /* fixed */} />
+              {ended && <Row label="Ended" value={toDate(trip.end_time!).toLocaleString() /* fixed */} />}
               <Row label="Trip ID" value={`#${trip.id}`} />
             </section>
           </>
