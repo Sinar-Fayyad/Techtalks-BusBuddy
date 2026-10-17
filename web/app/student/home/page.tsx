@@ -210,7 +210,7 @@ export default function StudentHomePage() {
             <p style={{ margin: '0.5rem 0 1rem 0', color: 'var(--bb-text-dim)' }}>
               We couldn&apos;t load your trip status.
             </p>
-            <Button color="primary" onClick={loadTrip}>Retry</Button>
+            <Button color="primary" onClick={() => loadTrip() /* fixed #8 */}>Retry</Button>
           </section>
         )}
 
@@ -220,7 +220,7 @@ export default function StudentHomePage() {
             <small style={{ color: 'var(--bb-text-dim)' }}>
               Last updated: {lastUpdated ? lastUpdated.toLocaleTimeString() : '—'}
             </small>
-            <Button color="primary" onClick={loadTrip}>Refresh</Button>
+            <Button color="primary" onClick={() => loadTrip() /* fixed #8 */}>Refresh</Button>
           </div>
         )}
       </div>
