@@ -6,6 +6,10 @@ import Button from '@/components/Button';
 import Input from '@/components/Input';
 import ErrorMessage from '@/components/ErrorMessage'; // NEW — shared friendly error
 
+// fixed #4: must match the server's rules in /api/driver/license (same types, same size)
+const ALLOWED_LICENSE_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
+const MAX_LICENSE_SIZE = 5 * 1024 * 1024; // 5MB
+
 export default function DriverRegister() {
   const router = useRouter();
   const { token, role, ready } = useAuth();
@@ -39,10 +43,19 @@ export default function DriverRegister() {
       return setError('All fields are required');
     }
 
+    // fixed #4: check the license BEFORE creating the account, so a bad file
+    // can never leave a half-registered account behind
+    if (!ALLOWED_LICENSE_TYPES.includes(form.license_file.type)) {
+      return setError('License must be a PDF, JPG or PNG file');
+    }
+    if (form.license_file.size > MAX_LICENSE_SIZE) {
+      return setError('License file must be 5MB or smaller');
+    }
+
     setLoading(true);
     try {
       // 1. Signup
-      const res = await fetch('http://localhost:3000/api/auth/signup', {
+      const res = await fetch('/api/auth/signup', { // fixed #4: relative URL
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -55,7 +68,7 @@ export default function DriverRegister() {
       if (!res.ok) { setError(data.error ?? 'Signup failed'); return; }
 
       // 2. Login (get token)
-      const login = await fetch('http://localhost:3000/api/auth/login', {
+      const login = await fetch('/api/auth/login', { // fixed #4: relative URL
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: form.email, password: form.password }),
@@ -66,7 +79,7 @@ export default function DriverRegister() {
       // 3. Upload license file
       const fd = new FormData();
       fd.append('file', form.license_file);
-      const up = await fetch('http://localhost:3000/api/driver/license', {
+      const up = await fetch('/api/driver/license', { // fixed #4: relative URL
         method: 'POST',
         headers: { Authorization: `Bearer ${ld.token}` },
         body: fd,
@@ -75,7 +88,7 @@ export default function DriverRegister() {
       if (!up.ok) { setError(ud.error ?? 'Upload failed'); return; }
 
       // 4. Create driver profile with stored file path
-      const prof = await fetch('http://localhost:3000/api/driver/profile', {
+      const prof = await fetch('/api/driver/profile', { // fixed #4: relative URL
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
