@@ -8,14 +8,14 @@ import { useAuth } from '../../auth-context';
 import ErrorMessage from '@/components/ErrorMessage';
 
 export default function ParentRegisterPage() {
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const router = useRouter();
   const { login } = useAuth();
 
-  const set = (key: 'name' | 'email' | 'password') =>
+  const set = (key: 'name' | 'email' | 'password' | 'confirmPassword') =>
     (e: ChangeEvent<HTMLInputElement>) =>
       setForm((current) => ({ ...current, [key]: e.target.value }));
 
@@ -27,12 +27,16 @@ export default function ParentRegisterPage() {
     const email = form.email.trim();
     const password = form.password;
 
-    if (!name || !email || !password) {
+    if (!name || !email || !password || !form.confirmPassword) {
       setError('Please fill in all fields');
       return;
     }
     if (!/\S+@\S+\.\S+/.test(email)) {
       setError('Enter a valid email');
+      return;
+    }
+    if (password !== form.confirmPassword) {
+      setError('Passwords do not match');
       return;
     }
 
@@ -123,11 +127,25 @@ export default function ParentRegisterPage() {
               <button
                 type="button"
                 className={styles.eyeBtn}
-                aria-label={showPw ? 'Hide password' : 'Show password'}
+                aria-label={showPw ? 'Hide passwords' : 'Show passwords'}
                 onClick={() => setShowPw(!showPw)}
               >
                 {showPw ? '🙈' : '👁️'}
               </button>
+            </div>
+          </div>
+
+          <div className={styles.field}>
+            <div className={styles.fieldInner}>
+              <span className={styles.icon} aria-hidden>🔒</span>
+              <input
+                className={styles.input}
+                type={showPw ? 'text' : 'password'}
+                placeholder="Confirm Password"
+                value={form.confirmPassword}
+                onChange={set('confirmPassword')}
+                aria-label="Confirm Password"
+              />
             </div>
           </div>
 
