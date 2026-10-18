@@ -154,7 +154,7 @@ export default function LoginPage() {
         <ErrorMessage message={error} />
         <p className={styles.createAccount}>
           Don't have an account?{' '}
-          <a href="/driver/register">Create Account</a>
+          <a href="/get-started">Create Account</a>
         </p>
       </div>
     </main>
