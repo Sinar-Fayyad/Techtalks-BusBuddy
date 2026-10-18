@@ -1,0 +1,38 @@
+.fileLabel {
+  cursor: pointer;
+}
+
+.fileLabel:focus-within {
+  outline: 2px solid var(--bb-link);
+  outline-offset: 2px;
+}
+
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.fileText {
+  flex: 1;
+  min-width: 0;
+  color: var(--bb-text);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fileHint {
+  margin: -0.25rem 0 1rem 1.25rem;
+  font-size: 0.78rem;
+  color: var(--bb-text-dim);
+}
+
+.success {
+  color: #4ade80;
+  margin: 0.75rem 0 0;
+  text-align: center;
+}

@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import Link from 'next/link'; // fixed #5: back link to admin home
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../auth-context';
 import Button from '@/components/Button';
@@ -101,22 +102,34 @@ export default function AdminDriversPage() {
     if (ready && !token) router.replace('/login');
   }, [ready, token, router]);
 
+  // fixed #5: relative URL, and every failure now shows a message
   const load = async (t: string) => {
     setError('');
-    const res = await fetch('http://localhost:3000/api/admin/drivers', {
-      headers: { Authorization: `Bearer ${t}` },
-    });
-    if (res.status === 401) {
-      logout();
-      return;
-    }
-    if (res.status === 403) {
-      setError('This account is not an admin');
+    try {
+      const res = await fetch('/api/admin/drivers', {
+        headers: { Authorization: `Bearer ${t}` },
+      });
+      if (res.status === 401) {
+        logout();
+        return;
+      }
+      if (res.status === 403) {
+        setError('This account is not an admin');
+        setDrivers([]);
+        return;
+      }
+      if (!res.ok) {
+        setError('Could not load the drivers list. Try again.');
+        setDrivers([]);
+        return;
+      }
+      const data = await res.json();
+      setDrivers(data.drivers ?? []);
+    } catch (err) {
+      console.error('Load drivers failed:', err);
+      setError('Server error — is the dev server running?');
       setDrivers([]);
-      return;
     }
-    const data = await res.json();
-    setDrivers(data.drivers ?? []);
   };
 
   // Guard 2 + auto-load
@@ -124,12 +137,28 @@ export default function AdminDriversPage() {
     if (ready && token && role === 'admin') load(token);
   }, [ready, token, role]);
 
+  // fixed #5: relative URL, check the answer, log out on 401, show errors
   const act = async (id: number, action: string) => {
-    await fetch(`http://localhost:3000/api/admin/drivers/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ action }),
-    });
+    setError('');
+    try {
+      const res = await fetch(`/api/admin/drivers/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action }),
+      });
+      if (res.status === 401) {
+        logout();
+        return;
+      }
+      if (!res.ok) {
+        setError('Could not update this driver. Try again.');
+        return;
+      }
+    } catch (err) {
+      console.error('Driver action failed:', err);
+      setError('Server error — is the dev server running?');
+      return;
+    }
     load(token!);
   };
 
@@ -149,6 +178,10 @@ export default function AdminDriversPage() {
 
   return (
     <main className="p-8">
+      {/* fixed #5: link back to the admin home */}
+      <p className="mb-2">
+        <Link href="/admin/home" style={{ color: 'var(--bb-link)', fontSize: 14 }}>← Admin home</Link>
+      </p>
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Pending Drivers</h1>
         <Button color="primary" onClick={logout}>Logout</Button>

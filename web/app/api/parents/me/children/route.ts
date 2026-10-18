@@ -17,19 +17,49 @@ export async function POST(req: Request) {
     if (payload.role !== 'parent') {
       return NextResponse.json({ error: 'Not a parent' }, { status: 403 });
     }
+
     const body = await req.json().catch(() => null);
-    const studentId = Number(body?.studentId);
-    if (!Number.isInteger(studentId) || studentId <= 0) {
-      return NextResponse.json({ error: 'Missing or invalid studentId' }, { status: 400 });
+
+    // Contract v11: send exactly one of studentId or email
+    const hasStudentId = body?.studentId !== undefined;
+    const hasEmail = body?.email !== undefined;
+    if (hasStudentId === hasEmail) {
+      return NextResponse.json({ error: 'Send either studentId or email' }, { status: 400 });
     }
-    const [targets] = await pool.query('SELECT id, role FROM users WHERE id = ?', [studentId]);
-    const target = (targets as any[])[0];
-    if (!target) {
-      return NextResponse.json({ error: 'Student not found' }, { status: 404 });
+
+    let studentId: number;
+    let target: any;
+
+    if (hasStudentId) {
+      // studentId mode: same behavior as before
+      studentId = Number(body.studentId);
+      if (!Number.isInteger(studentId) || studentId <= 0) {
+        return NextResponse.json({ error: 'Missing or invalid studentId' }, { status: 400 });
+      }
+      const [targets] = await pool.query('SELECT id, role FROM users WHERE id = ?', [studentId]);
+      target = (targets as any[])[0];
+      if (!target) {
+        return NextResponse.json({ error: 'Student not found' }, { status: 404 });
+      }
+    } else {
+      // email mode: find the child by email, then use their id
+      const email = typeof body.email === 'string' ? body.email.trim() : '';
+      if (!email) {
+        return NextResponse.json({ error: 'Missing or invalid email' }, { status: 400 });
+      }
+      const [targets] = await pool.query('SELECT id, role FROM users WHERE email = ?', [email]);
+      target = (targets as any[])[0];
+      if (!target) {
+        return NextResponse.json({ error: 'No account found with that email' }, { status: 404 });
+      }
+      studentId = target.id;
     }
+
+    // Same check for both modes
     if (target.role !== 'student') {
       return NextResponse.json({ error: 'User is not a student' }, { status: 403 });
     }
+
     const [existing] = await pool.query(
       'SELECT parent_user_id FROM parent_student WHERE parent_user_id = ? AND student_user_id = ?',
       [payload.userId, studentId]

@@ -64,7 +64,7 @@ export default function GetStartedPage() {
           <p className={styles.cardHint}>Ride to campus and beyond</p>
         </Link>
 
-        <Link className={styles.card} href="/parent/home">
+        <Link className={styles.card} href="/parent/register">
           <div className={styles.cardIcon}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 22s8-6 8-11a8 8 0 1 0-16 0c0 5 8 11 8 11z" />
@@ -81,10 +81,6 @@ export default function GetStartedPage() {
       <div className={styles.actions}>
         <Link href="/login" className={styles.navLink}>
           Already have an account? Log in
-        </Link>
-
-        <Link className={styles.continue} href="/student/register">
-          Continue →
         </Link>
       </div>
     </main>

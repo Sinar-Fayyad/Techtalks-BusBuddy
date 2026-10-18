@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type ChangeEvent, type FormEvent } from 'react';
+import Link from 'next/link';
 import styles from './page.module.css';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../auth-context';
@@ -9,8 +10,9 @@ import ErrorMessage from '@/components/ErrorMessage';
 export default function StudentRegisterPage() {
   const [form, setForm] = useState({
     name: '',
-    phone: '',
+    email: '',
     password: '',
+    confirmPassword: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,7 +20,7 @@ export default function StudentRegisterPage() {
   const router = useRouter();
   const { login } = useAuth();
 
-  const set = (key: 'name' | 'phone' | 'password') =>
+  const set = (key: 'name' | 'email' | 'password' | 'confirmPassword') =>
     (e: ChangeEvent<HTMLInputElement>) =>
       setForm((current) => ({ ...current, [key]: e.target.value }));
 
@@ -27,16 +29,21 @@ export default function StudentRegisterPage() {
     setError('');
 
     const name = form.name.trim();
-    const phone = form.phone.trim();
+    const email = form.email.trim();
     const password = form.password;
 
-    if (!name || !phone || !password) {
+    if (!name || !email || !password || !form.confirmPassword) {
       setError('Please fill in all fields');
       return;
     }
 
-    if (!/^\d{7,12}$/.test(phone.replace(/[\s\-()]/g, ''))) {
-      setError('Enter a valid phone number');
+    if (!/\S+@\S+\.\S+/.test(email)) {
+      setError('Enter a valid email');
+      return;
+    }
+
+    if (password !== form.confirmPassword) {
+      setError('Passwords do not match');
       return;
     }
 
@@ -46,7 +53,7 @@ export default function StudentRegisterPage() {
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email: '', password, phone, university: '', role: 'student' }),
+        body: JSON.stringify({ name, email, password, role: 'student' }),
       });
       const data = await res.json();
 
@@ -58,7 +65,7 @@ export default function StudentRegisterPage() {
       const loginRes = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: '', password }),
+        body: JSON.stringify({ email, password }),
       });
       const loginData = await loginRes.json();
 
@@ -80,11 +87,11 @@ export default function StudentRegisterPage() {
   return (
     <main className={styles.page}>
       <div className={styles.card}>
-        <h1 className={styles.title}>Sign In</h1>
+        <h1 className={styles.title}>Student Sign Up</h1>
         <p className={styles.subtitle}>
-          Enter your details to access
+          Create your account to
           <br />
-          your student account.
+          follow your bus in real time.
         </p>
 
         <form className={styles.form} onSubmit={submit} noValidate>
@@ -104,16 +111,15 @@ export default function StudentRegisterPage() {
 
           <div className={styles.field}>
             <div className={styles.fieldInner}>
-              <span className={styles.icon} aria-hidden>📱</span>
+              <span className={styles.icon} aria-hidden>✉️</span>
               <input
                 className={styles.input}
-                type="tel"
-                placeholder="Phone Number"
-                value={form.phone}
-                onChange={set('phone')}
-                aria-label="Phone Number"
+                type="email"
+                placeholder="Email"
+                value={form.email}
+                onChange={set('email')}
+                aria-label="Email"
               />
-              <span className={styles.inputHint}>+961 71 234 567</span>
             </div>
           </div>
 
@@ -131,7 +137,7 @@ export default function StudentRegisterPage() {
               <button
                 type="button"
                 className={styles.eyeBtn}
-                aria-label={showPw ? 'Hide password' : 'Show password'}
+                aria-label={showPw ? 'Hide passwords' : 'Show passwords'}
                 onClick={() => setShowPw(!showPw)}
               >
                 {showPw ? '🙈' : '👁️'}
@@ -139,29 +145,37 @@ export default function StudentRegisterPage() {
             </div>
           </div>
 
+          <div className={styles.field}>
+            <div className={styles.fieldInner}>
+              <span className={styles.icon} aria-hidden>🔒</span>
+              <input
+                className={styles.input}
+                type={showPw ? 'text' : 'password'}
+                placeholder="Confirm Password"
+                value={form.confirmPassword}
+                onChange={set('confirmPassword')}
+                aria-label="Confirm Password"
+              />
+            </div>
+          </div>
+
           <button type="submit" className={styles.submit} disabled={loading}>
-            {loading ? 'Signing in…' : 'Sign In →'}
+            {loading ? 'Creating account…' : 'Sign Up →'}
           </button>
         </form>
-
-        <div className={styles.orDivider}>
-          <span className={styles.orLine} />
-          <span className={styles.orText}>OR</span>
-          <span className={styles.orLine} />
-        </div>
-
-        <button type="button" className={styles.secondary}>
-          <span className={styles.secondaryIcon}>G</span>
-          Continue with Google
-        </button>
 
         <ErrorMessage message={error} />
 
         <p className={styles.footer}>
-          Don&apos;t have an account?{' '}
-          <a href="/student/register" className={styles.footerLink}>
-            Sign up
-          </a>
+          Already have an account?{' '}
+          <Link href="/login" className={styles.footerLink}>
+            Log in
+          </Link>
+        </p>
+        <p className={styles.footer}>
+          <Link href="/get-started" className={styles.footerLink}>
+            ← Go back
+          </Link>
         </p>
       </div>
     </main>
