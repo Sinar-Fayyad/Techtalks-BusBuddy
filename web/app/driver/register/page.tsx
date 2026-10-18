@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth, isLoggedIn, ROLE_HOME } from '@/app/auth-context';
 import Button from '@/components/Button';
@@ -127,6 +128,9 @@ export default function DriverRegister() {
       {msg && <p className="mt-4" style={{ color: 'var(--success)' }}>{msg}</p>}
       <div className="mt-4"><ErrorMessage message={error} /></div> {/* CHANGED — was: {error && <p className="mt-4" style={{ color: 'var(--danger)' }}>{error}</p>} */}
 
+      <p className="mt-4">
+        <Link href="/get-started" style={{ color: 'var(--bb-link)' }}>← Go back</Link>
+      </p>
     </main>
   );
 
