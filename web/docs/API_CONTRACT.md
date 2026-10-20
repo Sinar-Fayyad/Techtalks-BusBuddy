@@ -181,3 +181,51 @@ No new endpoint numbers — entry #12 gains the alternate body key only.
 UI producers / consumers of email mode: /parent/register (optional field), /parent/home (Add-child card).
 
 1a. (carried from v10, unchanged) POST /auth/signup role="admin" → 403; self-signable roles: driver | student | parent.
+
+## BusBuddy API Contract — v12 (20/10) — booking, driver profile, QR boarding
+
+Changed v12: entry 6 GET /driver/me response also includes `phone`, `route`, `stops`, `price` (null until set; price is a DECIMAL string e.g. "5.00").
+All new entries: Bearer token. Shared helper: web/lib/api-auth.ts. QR codes: web/lib/trip-codes.ts (signed, 24h, kind = board | exit).
+
+19. GET /drivers 🔒 student / admin
+Verified drivers only, ordered by name.
+200: { drivers: [ { id, name, phone, route, stops, price, booked } ] }  (booked = true if the calling student already booked; always false for admin)
+401 · 403 other roles · 500
+
+20. POST /bookings 🔒 student
+Body: { driverId: number, pickup?: string (max 255) }
+201: { message: "Booked", booking: { id, driver_id, pickup } }
+400 missing/invalid driverId or pickup · 401 · 403 not a student · 404 driver not found / not verified · 409 already booked (UNIQUE student+driver) · 500
+
+21. GET /bookings/me 🔒 student
+200: { bookings: [ { id, driver_id, driver_name, phone, route, stops, price, pickup, created_at } ] }  (newest first, [] when none)
+401 · 403 · 500
+
+22. GET /driver/bookings 🔒 driver
+Students who booked the caller.
+200: { bookings: [ { id, student_id, student_name, student_email, pickup, created_at } ] }  ({ bookings: [] } when none or no driver row — entry 17/18 precedent)
+401 · 403 · 500
+
+23. PATCH /driver/me 🔒 driver
+Body: any of { phone (≤30), route (≤255), stops (≤2000), price (0..999999.99) } — null or "" clears a field. At least one key required.
+200: { message: "Profile updated", driver: { name, email, status, license_url, created_at, phone, route, stops, price } }
+400 invalid JSON / invalid field / nothing to update · 401 · 403 · 404 no driver profile · 500
+
+24. GET /driver/qr 🔒 driver with an ACTIVE trip
+200: { trip_id, board_code, exit_code }  (two different signed strings, valid 24h)
+401 · 403 · 404 no driver profile · 409 no active trip · 500
+
+25. POST /trips/board 🔒 student
+Body: { code } — the board_code from entry 24.
+Checks: code valid + kind "board" → trip exists and is ACTIVE → student has booked that trip's driver.
+201: { message: "Boarded", trip_id, boarded_at }  (UTC string)
+400 invalid/expired/wrong-kind code · 401 · 403 not a student / not booked with this driver · 404 trip not found · 409 trip ended / already boarded / already exited · 500
+DB: trip_students.boarded_at set (row inserted, or updated if admin-assigned via entry 13).
+
+26. POST /trips/exit 🔒 student
+Body: { code } — the exit_code from entry 24.
+200: { message: "Exited", trip_id, exited_at }
+400 invalid/expired/wrong-kind code · 401 · 403 not a student · 409 not boarded / already exited · 500
+DB: trip_students.exited_at set. Works even if the driver already stopped the trip.
+
+PENDING: entry 14 (trip-status) — student finds the driver's active trip through `bookings`; parent sees live location only while boarded_at IS NOT NULL AND exited_at IS NULL.
