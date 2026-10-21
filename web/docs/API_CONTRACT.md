@@ -229,3 +229,54 @@ Body: { code } — the exit_code from entry 24.
 DB: trip_students.exited_at set. Works even if the driver already stopped the trip.
 
 PENDING: entry 14 (trip-status) — student finds the driver's active trip through `bookings`; parent sees live location only while boarded_at IS NOT NULL AND exited_at IS NULL.
+
+## BusBuddy API Contract — v13 (21/10) — UI redesign backend
+
+Auth for everything below: Bearer token unless said otherwise. Helpers: web/lib/api-auth.ts, trip-codes.ts, trip-status.ts, notify.ts, validation.ts. Times are UTC strings ("2026-10-20 07:55:10.377"). Decimals (price, lat/lng) come back as strings.
+
+# Changed entries
+
+POST /auth/signup — body { name, email, phone, password, role?, university? }. phone REQUIRED for every role (stored normalized, unique). Students must send university. password ≥ 8. Email lowercased. 400 invalid/missing · 403 role admin · 409 email OR phone exists.
+POST /auth/login — body { identifier, password } where identifier = email OR phone ("+961 71 000 001" works). Legacy { email, password } still works. 200 { token, role, name } · 400 · 401.
+GET /admin/drivers — optional ?status=pending (default) | verified | rejected | all. Rows now include phone, vehicle_plate, seats.
+PATCH /admin/drivers/{id} — also sends the driver a notification (verified / rejected). 400 bad id.
+GET /driver/me — now returns phone (from users), vehicle_plate, seats, route, stops, price, missing_fields[], profile_complete. (missing = vehicle_plate, seats, price)
+POST /driver/trips/start — optional body { scheduledTripId }. Starts that planned trip (400 bad id · 404 not yours/not found · 409 cancelled / already started). Booked students are notified. Without a body it starts an ad-hoc trip (nobody can board it).
+POST /parents/me/children — body { email, code } ONLY (student's email + 6-digit code from entry 33). studentId / email-only modes REMOVED. 201 { child } · 400 · 403 not a parent · 404 invalid/expired code (same message for unknown email) · 409 already linked · 429 after 5 wrong attempts in 15 min. Code is single use. Student is notified.
+GET /students/{id}/trip-status — trip now has phase: waiting (booked trip is running, not scanned in) | onboard | done, plus scheduled_trip_id, origin, destination, scheduled_at, driver_name, driver_phone, vehicle_plate, boarded_at, exited_at. Location visibility (server-enforced): student = waiting + onboard · PARENT = onboard ONLY · admin = always.
+GET /parents/me/children — children now include phone, university.
+GET /driver/trips/active — trip now includes scheduled_trip_id, origin, destination.
+REMOVED (replaced by 27). Delete web/app/api/drivers/route.ts.
+POST /bookings — body { scheduledTripId, pickup? }. A student can book many trips. 201 · 400 · 403 · 404 · 409 cancelled / already started / already booked / "Trip is full" (seats).
+GET /bookings/me — rows now: id, scheduled_trip_id, pickup, origin, destination, scheduled_at, price, stops, driver_name, driver_phone, vehicle_plate, trip_status (upcoming|in_progress|completed|cancelled), trip_id, boarded_at, exited_at.
+GET /driver/bookings — optional ?tripId=. Rows include student name/email/phone/university, pickup, scheduled trip info and status: booked | waiting | on_board | exited | no_show.
+PATCH /driver/me — any of name, phone, vehicle_plate, seats (1-100), route, stops, price, license_url (must start with /uploads/; sets status back to pending). 409 phone taken.
+POST /trips/board — student must have booked THIS trip (403 "You have not booked this trip"). Parents are notified.
+POST /trips/exit — parents are notified.
+
+# New entries
+
+GET /scheduled-trips 🔒 student/admin — bookable trips (verified driver, not cancelled, not started, not older than 1h). ?q= (driver, origin, destination, stops) · ?sort=time|price. 200 { trips: [ { id, driver_id, driver_name, driver_phone, vehicle_plate, origin, destination, scheduled_at, seats, seats_left, price, stops, booked } ] }
+GET /driver/scheduled-trips 🔒 driver — own trips newest first. 200 { trips: [ { id, origin, destination, scheduled_at, seats, price, stops, booked_count, status, trip_id } ], counts: { total, upcoming, completed, cancelled } }
+POST /driver/scheduled-trips 🔒 verified driver — { origin, destination, scheduled_at (ISO), seats, price?, stops? }. 201 · 400 invalid / past (>1h ago) / >1 year ahead · 403 not verified · 404 no profile.
+PATCH /driver/scheduled-trips/{id} 🔒 driver — edit origin, destination, scheduled_at, seats, price, stops or { cancelled: true } (booked students notified). 400 · 404 not yours · 409 started / cancelled / seats below bookings.
+DELETE /driver/scheduled-trips/{id} 🔒 driver — only if not started and no bookings (else 409 → cancel instead).
+DELETE /bookings/{id} 🔒 student — cancel own booking before the trip starts. 404 not yours · 409 started. Driver notified.
+POST /students/me/link-code 🔒 student — new 6-digit code, valid 10 min, replaces the old one. 201 { code, expires_at, expires_in_seconds }
+GET /students/me/parents 🔒 student — 200 { parents: [ { id, name, email, phone } ] }
+DELETE /students/me/parents/{parentId} 🔒 student — removes a linked parent. 404 not linked.
+DELETE /parents/me/children/{studentId} 🔒 parent — unlinks a child. 404 not linked.
+GET /parents/me/children/live 🔒 parent — all children in one call. 200 { children: [ { id, name, email, phone, university, status, trip } ] } status: idle | waiting | on_board | arrived (arrived shows 3h). Location only while on_board.
+GET /auth/me 🔒 any — { user: { id, name, email, phone, university, role, created_at } }
+PATCH /auth/me 🔒 any — name, phone, university (students only). 409 phone taken.
+POST /auth/change-password 🔒 any — { currentPassword, newPassword (≥8) }. 400 wrong current / too short.
+POST /driver/issues 🔒 driver — "Report vehicle issue" { category: breakdown|accident|delay|other, message? }. Notifies: parents of students ON BOARD the running trip · drivers of other running buses within 3 km (GPS fresh < 2 min) · all admins. 201 { issue, notified: { parents, drivers, admins } } · 400 · 429 (one report per 2 min).
+GET /notifications 🔒 any — latest 50 + unread_count. Types: boarded, exited, trip_started, booking, cancelled, issue, linked, driver_status.
+POST /notifications/read 🔒 any — { id } one, or {} all.
+GET /admin/stats 🔒 admin — { users:{students,parents}, drivers:{pending,verified,rejected}, trips:{running,upcoming,completed,cancelled}, bookings, open_issues }
+GET /admin/users 🔒 admin — ?role=student|parent&q= → { users: [ { id, name, email, phone, university, created_at, links, bookings } ] }
+GET /admin/trips 🔒 admin — ?status=all|upcoming|in_progress|completed|cancelled → every planned trip with driver, booked_count, status.
+GET /admin/issues 🔒 admin — ?status=open (default)|resolved|all.
+PATCH /admin/issues/{id} 🔒 admin — { status: "resolved" }. 404 · 409 already resolved.
+
+DB: schema.sql v5 (users.phone/university · drivers.vehicle_plate/seats, phone moved to users · scheduled_trips · trips.scheduled_trip_id · bookings per trip · link_codes · link_attempts · notifications · vehicle_issues). CHANGE LOG in schema.sql lists the ALTERs.

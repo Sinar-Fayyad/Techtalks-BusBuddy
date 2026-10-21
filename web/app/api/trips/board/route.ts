@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { authenticate } from '@/lib/api-auth';
+import { notify, parentIdsOf } from '@/lib/notify';
 import { readTripCode } from '@/lib/trip-codes';
 
-// POST /api/trips/board   (API_CONTRACT entry 25) — student scans the BOARDING code
+// POST /api/trips/board   (API_CONTRACT entry 25, v13) — student scans the BOARDING code
 export async function POST(req: Request) {
   try {
     const a = authenticate(req, ['student']);
@@ -16,19 +17,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid or expired code' }, { status: 400 });
     }
 
-    const [trips] = await pool.query('SELECT id, driver_id, end_time FROM trips WHERE id = ?', [tripId]);
+    const [trips] = await pool.query('SELECT id, driver_id, scheduled_trip_id, end_time FROM trips WHERE id = ?', [tripId]);
     const trip = (trips as any[])[0];
     if (!trip) return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
     if (trip.end_time !== null) {
       return NextResponse.json({ error: 'Trip already ended' }, { status: 409 });
     }
 
-    const [booked] = await pool.query(
-      'SELECT id FROM bookings WHERE student_id = ? AND driver_id = ?',
-      [studentId, trip.driver_id]
-    );
+    // v13: the student must have booked THIS trip (its scheduled trip), not just the driver
+    const [booked] = trip.scheduled_trip_id
+      ? await pool.query(
+          'SELECT id FROM bookings WHERE student_id = ? AND scheduled_trip_id = ?',
+          [studentId, trip.scheduled_trip_id]
+        )
+      : [[]];
     if ((booked as any[]).length === 0) {
-      return NextResponse.json({ error: 'You have not booked this driver' }, { status: 403 });
+      return NextResponse.json({ error: 'You have not booked this trip' }, { status: 403 });
     }
 
     const [rows] = await pool.query(
@@ -60,6 +64,16 @@ export async function POST(req: Request) {
       'SELECT CAST(boarded_at AS CHAR) AS boarded_at FROM trip_students WHERE trip_id = ? AND student_id = ?',
       [tripId, studentId]
     );
+    // tell the parents: location sharing has started
+    const [who] = await pool.query('SELECT name FROM users WHERE id = ?', [studentId]);
+    await notify(
+      await parentIdsOf(studentId),
+      'boarded',
+      `${(who as any[])[0]?.name ?? 'Your child'} boarded the bus`,
+      'Live location is now shared with you until they exit.',
+      { tripId, studentId }
+    );
+
     return NextResponse.json(
       { message: 'Boarded', trip_id: tripId, boarded_at: (out as any[])[0].boarded_at },
       { status: 201 }

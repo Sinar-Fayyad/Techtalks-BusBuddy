@@ -47,41 +47,24 @@ Last updated: 20/10
 |---|
 | F3 parent link by email (code has email mode now) → B23, B24 |
 | F5 again: navigation was changed since the last test |
-| Backend v12 (booking + QR) → B1–B24 |
+| Backend v13: run node tests/api-smoke.mjs (159 checks) on a fresh seed, then click-test each page
 | Sprint 5: mobile driver status/back/logout, My trips, GPS buffer, parent home restyle, GpsShare folder change |
 | Tamara's UI/navigation fixes · Jad's mobile landing, sign-up, picker |
 | Mobile regression M1–M6 after all of the above |
 
 ### 🚧 Not built yet (can't test)
+
 Booking UI · QR UI · mobile GPS sharing · entry 14 update (booking + boarded/exited) · unlink child
 
-## Backend v12 — booking + QR (20/10)
-| ID | Call | Expected | Result |
-|---|---|---|---|
-| B1 | GET /drivers as student | 200, verified only, `booked` true for seed student | |
-| B2 | GET /drivers no token / parent token | 401 / 403 | |
-| B3 | POST /bookings, pending driver id | 404 | |
-| B4 | POST /bookings {} | 400 | |
-| B5 | POST /bookings, same driver twice | 409 | |
-| B6 | POST /bookings as driver | 403 | |
-| B7 | GET /bookings/me | 200, driver_name, route, price | |
-| B8 | GET /driver/bookings as driver | 200, includes student | |
-| B9 | GET /driver/bookings as student | 403 | |
-| B10 | PATCH /driver/me {phone}, then GET | 200, value shown | |
-| B11 | PATCH /driver/me {} | 400 | |
-| B12 | PATCH /driver/me {price:-1} / {price:"abc"} | 400 / 400 | |
-| B13 | GET /driver/qr, active trip | 200, 2 different codes | |
-| B14 | GET /driver/qr after Stop | 409 | |
-| B15 | POST /trips/board with exit_code | 400 | |
-| B16 | POST /trips/board {code:"abc"} | 400 | |
-| B17 | POST /trips/board, student not booked | 403 | |
-| B18 | POST /trips/board, booked student | 201 | |
-| B19 | POST /trips/board again | 409 | |
-| B20 | POST /trips/exit after boarding | 200 | |
-| B21 | POST /trips/exit again | 409 | |
-| B22 | POST /trips/exit without boarding | 409 | |
-| B23 | Parent POST /parents/me/children {email: seed student} | 201 (409 if linked) | |
-| B24 | Same, unknown email / driver email | 404 / 403 | |
+## Backend v13 — automated API smoke test (21/10)
+
+Run (server on :3000, DB freshly imported: schema.sql then seed.sql): cd web then node tests/api-smoke.mjs Covers 159 checks: signup/login (email + phone), profile, trips add/edit/cancel/delete, browse + search, booking (full / duplicate / cancelled / running), secure child linking (code, single use, 429), start → board → ping → exit, parent location privacy, vehicle issue notifications (parents / nearby driver / admin), notifications, admin endpoints. It creates data: re-import schema.sql + seed.sql after running it. Last run (Sinar, 10/10): 10 passed / 0 failed
+
+(c) In "Reset test data", replace the list with:
+
+Drop the database BusBuddy_app (phpMyAdmin → SQL tab → DROP DATABASE IF EXISTS BusBuddy_app;)
+Import database/schema.sql (creates the database and all tables)
+Import database/seed.sql (no migration files anymore) And replace the "Re-run steps 3–4 after any trip stop" line with: "The seeded running trip is used once: after you stop it, repeat steps 1–3 to get a fresh running trip." Seed users now: admin, driver1 (verified, profile filled, 5 trips), driver2 (pending), student1 (2 bookings, on board), student2 (no bookings), parent1 (linked to student1). Phones +96170000000.. / +96171000001..
 
 ## Gotchas
 - Seed reset changes user ids: re-check ids before debugging by id.
