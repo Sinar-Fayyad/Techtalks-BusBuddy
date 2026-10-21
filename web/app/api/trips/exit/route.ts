@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { authenticate } from '@/lib/api-auth';
+import { notify, parentIdsOf } from '@/lib/notify';
 import { readTripCode } from '@/lib/trip-codes';
 
 // POST /api/trips/exit   (API_CONTRACT entry 26) — student scans the EXIT code
@@ -37,6 +38,16 @@ export async function POST(req: Request) {
       'SELECT CAST(exited_at AS CHAR) AS exited_at FROM trip_students WHERE trip_id = ? AND student_id = ?',
       [tripId, studentId]
     );
+    // tell the parents: location sharing has stopped
+    const [who] = await pool.query('SELECT name FROM users WHERE id = ?', [studentId]);
+    await notify(
+      await parentIdsOf(studentId),
+      'exited',
+      `${(who as any[])[0]?.name ?? 'Your child'} got off the bus`,
+      'Location sharing has stopped.',
+      { tripId, studentId }
+    );
+
     return NextResponse.json(
       { message: 'Exited', trip_id: tripId, exited_at: (out as any[])[0].exited_at },
       { status: 200 }
