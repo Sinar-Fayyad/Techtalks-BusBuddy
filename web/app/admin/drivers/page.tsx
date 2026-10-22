@@ -1,209 +1,85 @@
 'use client';
-import { useEffect, useState } from 'react';
-import Link from 'next/link'; // fixed #5: back link to admin home
-import { useRouter } from 'next/navigation';
-import { useAuth } from '../../auth-context';
-import Button from '@/components/Button';
-import ErrorMessage from '@/components/ErrorMessage';
-import { viewLicense, fetchLicenseBlob, licenseKind } from '@/lib/view-license';
+import { useCallback, useEffect, useState } from 'react';
+import AdminShell from '@/components/AdminShell';
+import { useMe } from '@/components/AppShell';
+import PageHead from '@/components/ui/PageHead';
+import StatusChip from '@/components/ui/StatusChip';
+import Avatar from '@/components/ui/Avatar';
+import Icon from '@/components/ui/Icon';
+import { api, errorOf } from '@/lib/client-api';
+import { fmtDate } from '@/lib/format';
+import { viewLicense } from '@/lib/view-license';
 
-// --- T12: inline license preview ---
-function LicensePreview({
-  token,
-  licenseUrl,
-  onError,
-}: {
-  token: string;
-  licenseUrl: string;
-  onError: (msg: string) => void;
-}) {
-  const name = licenseUrl.split('/').pop() ?? '';
-  const kind = licenseKind(licenseUrl);
-  const [url, setUrl] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+const TABS = ['pending', 'verified', 'rejected', 'all'] as const;
 
-  // Images are fetched inline (Bearer -> blob -> object URL). PDFs are NOT.
+function DriversContent() {
+  const { token } = useMe();
+  const [tab, setTab] = useState<(typeof TABS)[number]>('pending');
+  const [rows, setRows] = useState<any[] | null>(null);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+
   useEffect(() => {
-    if (kind !== 'image') return;
-    let active = true;
-    let created: string | null = null;
-    (async () => {
-      try {
-        const blob = await fetchLicenseBlob(token, name);
-        if (!active) return;
-        created = URL.createObjectURL(blob);
-        setUrl(created);
-      } catch (err) {
-        console.error('License preview failed:', err);
-        if (active) setFailed(true);
-      }
-    })();
-    return () => {
-      active = false;
-      if (created) URL.revokeObjectURL(created); // free the blob's memory
-    };
-  }, [token, name, kind]);
+    const s = new URLSearchParams(window.location.search).get('status');
+    if (s && (TABS as readonly string[]).includes(s)) setTab(s as any);
+  }, []);
 
-  // PDF / unknown type -> protected link (opened with Bearer, endpoint 8)
-  if (kind !== 'image') {
-    return (
-      <Button
-        color="primary"
-        onClick={async () => {
-          try {
-            await viewLicense(token, name);
-          } catch (e: any) {
-            onError(e?.message ?? 'Could not open the license file.');
-          }
-        }}
-      >
-        {kind === 'pdf' ? '📄 View PDF' : 'Open file'}
-      </Button>
-    );
+  const load = useCallback(async () => {
+    setRows(null);
+    const r = await api(token, `/admin/drivers?status=${tab}`);
+    if (r.ok) { setRows(r.data.drivers); setError(''); } else setError(errorOf(r));
+  }, [token, tab]);
+  useEffect(() => { load(); }, [load]);
+
+  async function review(id: number, action: 'verify' | 'reject') {
+    const r = await api(token, `/admin/drivers/${id}`, { method: 'PATCH', body: { action } });
+    if (!r.ok) return setError(errorOf(r));
+    setNotice(action === 'verify' ? 'Driver verified.' : 'Driver rejected.');
+    load();
+  }
+  async function openLicense(url: string) {
+    try { await viewLicense(token, url.split('/').pop() ?? ''); } catch (e: any) { setError(e?.message ?? 'Could not open the license.'); }
   }
 
-  if (failed) return <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>Preview unavailable</span>;
-  if (!url) return <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading license…</span>;
-
-  return expanded ? (
-    <div>
-      <img
-        src={url}
-        alt="Driver license"
-        style={{ display: 'block', width: '100%', maxWidth: 420, borderRadius: 12, border: '1px solid var(--bb-link)' }}
-      />
-      <button
-        onClick={() => setExpanded(false)}
-        style={{ marginTop: 6, background: 'none', border: 'none', color: 'var(--bb-link)', cursor: 'pointer', fontSize: 13 }}
-      >
-        Close preview
-      </button>
-    </div>
-  ) : (
-    <img
-      src={url}
-      alt="Driver license"
-      onClick={() => setExpanded(true)}
-      title="Click to enlarge"
-      style={{ display: 'block', height: 64, borderRadius: 8, border: '1px solid var(--bb-link)', cursor: 'zoom-in' }}
-    />
+  return (
+    <>
+      <PageHead icon="bus" highlight="Drivers" subtitle="Review licenses and manage drivers" />
+      {error && <div className="bb-alert bb-alert-error" style={{ marginBottom: '1rem' }} role="alert">{error}</div>}
+      {notice && <div className="bb-alert bb-alert-ok" style={{ marginBottom: '1rem' }}>{notice}</div>}
+      <div className="bb-tabs" role="tablist" style={{ marginBottom: '1rem' }}>
+        {TABS.map((t) => <button key={t} className="bb-tab" role="tab" aria-selected={tab === t} onClick={() => setTab(t)} style={{ textTransform: 'capitalize' }}>{t}</button>)}
+      </div>
+      {rows === null ? <div className="bb-skeleton" /> : rows.length === 0 ? (
+        <div className="bb-card bb-empty"><span className="bb-emoji">🚌</span>No {tab === 'all' ? '' : tab} drivers.</div>
+      ) : (
+        <div className="bb-table-wrap">
+          <table className="bb-table">
+            <thead><tr><th>Driver</th><th>Phone</th><th>Vehicle</th><th>Status</th><th>Joined</th><th>License</th><th>Actions</th></tr></thead>
+            <tbody>
+              {rows.map((d) => (
+                <tr key={d.id}>
+                  <td><div className="bb-row" style={{ gap: 10, flexWrap: 'nowrap' }}><Avatar name={d.name} size={38} /><div><b>{d.name}</b><div className="bb-small bb-muted">{d.email}</div></div></div></td>
+                  <td>{d.phone ?? '—'}</td>
+                  <td>{d.vehicle_plate ? `${d.vehicle_plate}${d.seats ? ` · ${d.seats} seats` : ''}` : '—'}</td>
+                  <td><StatusChip status={d.status} /></td>
+                  <td className="bb-small bb-muted">{fmtDate(d.created_at)}</td>
+                  <td><button className="bb-btn bb-btn-sm bb-btn-ghost" onClick={() => openLicense(d.license_url)}><Icon name="eye" size={14} /> View</button></td>
+                  <td>
+                    <div className="bb-row" style={{ gap: 6, flexWrap: 'nowrap' }}>
+                      {d.status !== 'verified' && <button className="bb-btn bb-btn-sm bb-btn-green" onClick={() => review(d.id, 'verify')}><Icon name="check" size={14} /> Verify</button>}
+                      {d.status !== 'rejected' && <button className="bb-btn bb-btn-sm bb-btn-danger" onClick={() => review(d.id, 'reject')}><Icon name="x" size={14} /> Reject</button>}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
   );
 }
 
 export default function AdminDriversPage() {
-  const router = useRouter();
-  const { token, role, ready, logout } = useAuth();
-  const [drivers, setDrivers] = useState<any[]>([]);
-  const [error, setError] = useState('');
-
-  // Guard 1: no session at all -> back to /login
-  useEffect(() => {
-    if (ready && !token) router.replace('/login');
-  }, [ready, token, router]);
-
-  // fixed #5: relative URL, and every failure now shows a message
-  const load = async (t: string) => {
-    setError('');
-    try {
-      const res = await fetch('/api/admin/drivers', {
-        headers: { Authorization: `Bearer ${t}` },
-      });
-      if (res.status === 401) {
-        logout();
-        return;
-      }
-      if (res.status === 403) {
-        setError('This account is not an admin');
-        setDrivers([]);
-        return;
-      }
-      if (!res.ok) {
-        setError('Could not load the drivers list. Try again.');
-        setDrivers([]);
-        return;
-      }
-      const data = await res.json();
-      setDrivers(data.drivers ?? []);
-    } catch (err) {
-      console.error('Load drivers failed:', err);
-      setError('Server error — is the dev server running?');
-      setDrivers([]);
-    }
-  };
-
-  // Guard 2 + auto-load
-  useEffect(() => {
-    if (ready && token && role === 'admin') load(token);
-  }, [ready, token, role]);
-
-  // fixed #5: relative URL, check the answer, log out on 401, show errors
-  const act = async (id: number, action: string) => {
-    setError('');
-    try {
-      const res = await fetch(`/api/admin/drivers/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ action }),
-      });
-      if (res.status === 401) {
-        logout();
-        return;
-      }
-      if (!res.ok) {
-        setError('Could not update this driver. Try again.');
-        return;
-      }
-    } catch (err) {
-      console.error('Driver action failed:', err);
-      setError('Server error — is the dev server running?');
-      return;
-    }
-    load(token!);
-  };
-
-  if (ready && token && role !== 'admin') {
-    return (
-      <main className="p-8">
-        <h1 className="text-2xl font-bold">Access denied</h1>
-        <p className="mt-2" style={{ color: 'var(--text-muted)' }}>This page is for admins only.</p>
-        <Button color="primary" onClick={logout}>Log out</Button>
-      </main>
-    );
-  }
-
-  if (!ready || !token) {
-    return <main className="p-8"><p style={{ color: 'var(--text-muted)' }}>Checking session…</p></main>;
-  }
-
-  return (
-    <main className="p-8">
-      {/* fixed #5: link back to the admin home */}
-      <p className="mb-2">
-        <Link href="/admin/home" style={{ color: 'var(--bb-link)', fontSize: 14 }}>← Admin home</Link>
-      </p>
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Pending Drivers</h1>
-        <Button color="primary" onClick={logout}>Logout</Button>
-      </div>
-      <ErrorMessage message={error} />
-      {drivers.length === 0 && !error && <p className="mt-4" style={{ color: 'var(--text-muted)' }}>No pending drivers 🎉</p>}
-      <ul className="mt-4 space-y-2">
-        {drivers.map((d) => (
-          <li key={d.id} className="border p-3" style={{ borderRadius: 12 }}>
-            <div className="flex justify-between items-center gap-3">
-              <span>{d.name} — {d.email}</span>
-              <span className="flex gap-2">
-                <Button color="success" onClick={() => act(d.id, 'verify')}>Verify</Button>
-                <Button color="danger" onClick={() => act(d.id, 'reject')}>Reject</Button>
-              </span>
-            </div>
-            <div className="mt-3">
-              <LicensePreview token={token!} licenseUrl={d.license_url} onError={setError} />
-            </div>
-          </li>
-        ))}
-      </ul>
-    </main>
-  );
+  return <AdminShell><DriversContent /></AdminShell>;
 }
