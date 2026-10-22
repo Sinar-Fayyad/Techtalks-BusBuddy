@@ -1,0 +1,9 @@
+.backdrop {
+  position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 1rem;
+  background: rgba(3, 6, 40, 0.72); backdrop-filter: blur(4px);
+}
+.box { width: 100%; max-width: 460px; max-height: 90vh; overflow-y: auto; background: rgba(12, 20, 110, 0.97); }
+.head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem; }
+.head h2 { margin: 0; font-size: 1.2rem; }
+.close { background: transparent; border: 0; color: #fff; cursor: pointer; padding: 0.25rem; border-radius: 8px; }
+.close:hover { background: rgba(255, 255, 255, 0.12); }

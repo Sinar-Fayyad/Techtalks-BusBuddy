@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* =====================================================================
+   BusBuddy design tokens (neon blue / violet / cyan). Old variable names are
+   kept so pages that are not restyled yet keep working.
+   ===================================================================== */
 :root {
   --navy: #1B2A4A;
   --amber: #FF8A34;
@@ -10,15 +14,167 @@
 
   --bb-card-bg-fallback: rgba(16, 26, 118, 0.94);
   --bb-bg-gradient: linear-gradient(160deg, #011875 0%, #012b8d 50%, #013ddb 100%);
-
   --bb-card-bg: rgba(255, 255, 255, 0.08);
   --bb-border-gradient: linear-gradient(135deg, #01a9fe, #013ddb);
   --bb-input-bg: rgba(255, 255, 255, 0.06);
   --bb-btn-gradient: linear-gradient(135deg, #01a9fe, #013ddb);
-
   --bb-text: #ffffff;
   --bb-text-dim: rgba(255, 255, 255, 0.75);
   --bb-error: #ff6b6b;
   --bb-link: #08d9d6;
 
+  /* v2 tokens */
+  --bb-cyan: #00e5ff;
+  --bb-magenta: #ff2bd6;
+  --bb-violet: #7a2cff;
+  --bb-blue: #1d4ed8;
+  --bb-green: #19e3a0;
+  --bb-amber: #ffb02e;
+  --bb-pink: #ff3d8b;
+  --bb-bg-dark: #050b3a;
+  --bb-panel: rgba(255, 255, 255, 0.07);
+  --bb-panel-strong: rgba(255, 255, 255, 0.12);
+  --bb-line: rgba(0, 229, 255, 0.28);
+  --bb-grad: linear-gradient(135deg, #00e5ff 0%, #4f6bff 55%, #ff2bd6 100%);
+  --bb-grad-soft: linear-gradient(135deg, rgba(0, 229, 255, 0.25), rgba(255, 43, 214, 0.25));
+  --bb-radius: 18px;
 }
+
+html, body { min-height: 100%; }
+body {
+  margin: 0;
+  color: var(--bb-text);
+  background: var(--bb-bg-dark);
+  font-family: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+a { color: inherit; }
+* { box-sizing: border-box; }
+
+/* ---------- full-page backgrounds ---------- */
+.bb-auth-bg {
+  min-height: 100vh;
+  background: linear-gradient(rgba(5, 11, 70, 0.15), rgba(5, 11, 70, 0.15)), url('/busbuddy-bg.jpg') center / cover no-repeat fixed;
+}
+.bb-app-bg {
+  min-height: 100vh;
+  background-color: #050b3a;
+  background-image:
+    linear-gradient(180deg, rgba(5, 11, 58, 1) 0%, rgba(8, 20, 100, 0.97) 45%, rgba(40, 10, 110, 0.9) 100%),
+    url('/busbuddy-skyline.jpg');
+  background-size: 100% 100%, 100% auto;
+  background-position: 0 0, center bottom;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+/* ---------- glass cards ---------- */
+.bb-card {
+  background: var(--bb-panel);
+  border: 1px solid var(--bb-line);
+  border-radius: var(--bb-radius);
+  padding: 1.1rem 1.25rem;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 0 24px rgba(0, 229, 255, 0.06), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+.bb-card-glow { border-color: rgba(0, 229, 255, 0.55); box-shadow: 0 0 28px rgba(0, 229, 255, 0.18); }
+.bb-card-title { margin: 0 0 0.6rem; font-size: 1.05rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; }
+.bb-muted { color: var(--bb-text-dim); }
+.bb-small { font-size: 0.85rem; }
+.bb-grid { display: grid; gap: 1rem; }
+.bb-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.bb-between { justify-content: space-between; }
+.bb-stack { display: flex; flex-direction: column; gap: 0.75rem; }
+
+/* ---------- page header ---------- */
+.bb-page-head { display: flex; align-items: center; gap: 0.9rem; margin-bottom: 1.1rem; }
+.bb-page-head h1 { margin: 0; font-size: 1.9rem; font-weight: 800; line-height: 1.1; }
+.bb-page-head h1 em { font-style: normal; color: var(--bb-cyan); }
+.bb-page-head p { margin: 0.15rem 0 0; color: var(--bb-text-dim); }
+.bb-page-icon {
+  width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; flex: none;
+  background: var(--bb-grad-soft); border: 1px solid var(--bb-line); color: var(--bb-cyan);
+}
+
+/* ---------- buttons ---------- */
+.bb-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+  border: 0; cursor: pointer; font-weight: 700; font-size: 0.95rem; color: #fff; text-decoration: none;
+  padding: 0.75rem 1.4rem; border-radius: 999px; background: var(--bb-grad);
+  box-shadow: 0 0 22px rgba(0, 229, 255, 0.35); transition: transform 0.12s, filter 0.12s, opacity 0.12s;
+}
+.bb-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.bb-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; filter: none; }
+.bb-btn-block { width: 100%; }
+.bb-btn-sm { padding: 0.5rem 1rem; font-size: 0.85rem; }
+.bb-btn-ghost { background: transparent; border: 1px solid var(--bb-line); box-shadow: none; color: var(--bb-cyan); }
+.bb-btn-danger { background: linear-gradient(135deg, #ff3d8b, #c4147a); box-shadow: 0 0 18px rgba(255, 61, 139, 0.35); }
+.bb-btn-green { background: linear-gradient(135deg, #19e3a0, #0aa876); box-shadow: 0 0 18px rgba(25, 227, 160, 0.3); color: #04261b; }
+
+/* ---------- chips ---------- */
+.bb-chip {
+  display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.7rem; border-radius: 999px;
+  font-size: 0.75rem; font-weight: 700; border: 1px solid transparent; white-space: nowrap;
+}
+.bb-chip-cyan { background: rgba(0, 229, 255, 0.16); color: var(--bb-cyan); border-color: rgba(0, 229, 255, 0.4); }
+.bb-chip-green { background: rgba(25, 227, 160, 0.18); color: var(--bb-green); border-color: rgba(25, 227, 160, 0.45); }
+.bb-chip-amber { background: rgba(255, 176, 46, 0.18); color: var(--bb-amber); border-color: rgba(255, 176, 46, 0.45); }
+.bb-chip-pink { background: rgba(255, 61, 139, 0.18); color: var(--bb-pink); border-color: rgba(255, 61, 139, 0.45); }
+.bb-chip-violet { background: rgba(122, 44, 255, 0.25); color: #c8b0ff; border-color: rgba(122, 44, 255, 0.55); }
+.bb-chip-grey { background: rgba(255, 255, 255, 0.1); color: var(--bb-text-dim); border-color: rgba(255, 255, 255, 0.2); }
+
+/* ---------- inputs ---------- */
+.bb-input, .bb-select, .bb-textarea {
+  width: 100%; color: #fff; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--bb-line);
+  border-radius: 14px; padding: 0.75rem 0.95rem; font-size: 0.95rem; outline: none;
+}
+.bb-input::placeholder, .bb-textarea::placeholder { color: rgba(255, 255, 255, 0.5); }
+.bb-input:focus, .bb-select:focus, .bb-textarea:focus { border-color: var(--bb-cyan); box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.18); }
+.bb-select option { color: #111; }
+.bb-label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.3rem; color: var(--bb-text-dim); }
+.bb-field-error { color: var(--bb-error); font-size: 0.8rem; margin: 0.25rem 0 0 0.4rem; }
+
+/* ---------- tabs / segmented ---------- */
+.bb-tabs { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.bb-tab {
+  border: 1px solid var(--bb-line); background: rgba(255, 255, 255, 0.05); color: #fff; cursor: pointer;
+  padding: 0.55rem 1.1rem; border-radius: 999px; font-weight: 700; font-size: 0.9rem;
+}
+.bb-tab[aria-selected="true"] { background: var(--bb-grad); border-color: transparent; box-shadow: 0 0 18px rgba(0, 229, 255, 0.3); }
+
+/* ---------- misc ---------- */
+.bb-alert { border-radius: 14px; padding: 0.7rem 1rem; font-size: 0.9rem; border: 1px solid; }
+.bb-alert-error { background: rgba(255, 107, 107, 0.12); border-color: rgba(255, 107, 107, 0.5); color: #ffb3b3; }
+.bb-alert-ok { background: rgba(25, 227, 160, 0.12); border-color: rgba(25, 227, 160, 0.5); color: #9ff3d4; }
+.bb-alert-info { background: rgba(0, 229, 255, 0.1); border-color: var(--bb-line); color: #bff6ff; }
+.bb-empty { text-align: center; padding: 2rem 1rem; color: var(--bb-text-dim); }
+.bb-empty .bb-emoji { font-size: 2.2rem; display: block; margin-bottom: 0.4rem; }
+.bb-divider { height: 1px; background: rgba(255, 255, 255, 0.12); margin: 0.6rem 0; border: 0; }
+.bb-kv { display: flex; justify-content: space-between; gap: 1rem; padding: 0.5rem 0; border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.9rem; }
+.bb-kv span:first-child { color: var(--bb-text-dim); }
+.bb-kv span:last-child { font-weight: 600; text-align: right; }
+.bb-timeline { list-style: none; margin: 0; padding: 0; }
+.bb-timeline li { position: relative; padding: 0 0 0.45rem 1.4rem; font-size: 0.85rem; }
+.bb-timeline li::before { content: ''; position: absolute; left: 0.15rem; top: 0.3rem; width: 9px; height: 9px; border-radius: 50%; background: var(--bb-cyan); box-shadow: 0 0 8px var(--bb-cyan); }
+.bb-timeline li::after { content: ''; position: absolute; left: calc(0.15rem + 4px); top: 1rem; bottom: -0.1rem; width: 1px; background: var(--bb-line); }
+.bb-timeline li:last-child::after { display: none; }
+.bb-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: var(--bb-cyan); border-radius: 50%; animation: bb-spin 0.8s linear infinite; }
+@keyframes bb-spin { to { transform: rotate(360deg); } }
+.bb-skeleton { height: 90px; border-radius: var(--bb-radius); background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(255,255,255,0.12), rgba(255,255,255,0.05)); background-size: 200% 100%; animation: bb-shimmer 1.4s infinite; }
+@keyframes bb-shimmer { to { background-position: -200% 0; } }
+
+/* leaflet needs its own css (was commented out in layout) */
+.bb-bus-marker { background: transparent; border: 0; }
+
+/* auth card titles */
+.bb-auth-title { margin: 0; text-align: center; font-size: 2rem; font-weight: 800; }
+.bb-auth-sub { margin: 0.3rem 0 1.1rem; text-align: center; color: var(--bb-text-dim); font-size: 0.95rem; }
+
+/* logo on a white badge so the blue bus stays visible on dark / blue backgrounds */
+.bb-logo-badge { display: inline-grid; place-items: center; width: 46px; height: 46px; border-radius: 14px; background: #fff; box-shadow: 0 0 16px rgba(0, 229, 255, 0.45); flex: none; }
+.bb-logo-badge img { width: 34px; height: 34px; object-fit: contain; }
+
+/* student / parent home: wide card + side column */
+.bb-home-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(250px, 1fr); gap: 1rem; align-items: start; }
+.bb-side { display: flex; flex-direction: column; gap: 1rem; }
+@media (max-width: 960px) { .bb-home-grid { grid-template-columns: 1fr; } }

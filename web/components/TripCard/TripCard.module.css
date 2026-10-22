@@ -1,0 +1,12 @@
+.card { display: grid; grid-template-columns: 200px 1fr 170px; gap: 1rem; align-items: center; }
+.driver { display: flex; align-items: center; gap: 0.7rem; }
+.route { min-width: 0; }
+.when { display: flex; align-items: center; gap: 0.35rem; color: var(--bb-cyan); font-size: 0.85rem; font-weight: 700; }
+.od { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; font-weight: 700; font-size: 1.05rem; margin-top: 2px; }
+.side { display: flex; flex-direction: column; align-items: flex-end; gap: 0.35rem; text-align: right; }
+.price { font-size: 1.5rem; font-weight: 800; color: #fff; }
+.price small { font-size: 0.75rem; font-weight: 500; color: var(--bb-text-dim); }
+@media (max-width: 760px) {
+  .card { grid-template-columns: 1fr; }
+  .side { align-items: flex-start; text-align: left; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 0.8rem; }
+}
