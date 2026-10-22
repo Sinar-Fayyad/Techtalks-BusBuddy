@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 // import L from 'leaflet';  // Page is still unavailable
 import styles from './LeafletMap.module.css';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css'; // tiles/markers need Leaflet's own CSS (was missing)
 
 export type LeafletMapProps = {
   latitude: number | null;

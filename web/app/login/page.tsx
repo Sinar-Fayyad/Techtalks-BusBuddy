@@ -1,162 +1,68 @@
 'use client';
-
-import { useState, type ChangeEvent, type FormEvent, useEffect } from 'react';
-import styles from './page.module.css';
+import { FormEvent, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useAuth, ROLE_HOME, isLoggedIn } from '@/app/auth-context';
-import ErrorMessage from '@/components/ErrorMessage';
+import AuthShell from '@/components/AuthShell';
+import Field from '@/components/ui/Field';
+import Icon from '@/components/ui/Icon';
+import { useAuth, isLoggedIn, ROLE_HOME, Role } from '@/app/auth-context';
+import { api, errorOf } from '@/lib/client-api';
 
 export default function LoginPage() {
-  const [form, setForm] = useState({ email: '', password: '' });
-  const [fieldError, setFieldError] = useState({ email: '', password: '' });
-  const [msg, setMsg] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [showPw, setShowPw] = useState(false);
-  const router = useRouter();
   const { token, role, ready, login } = useAuth();
+  const router = useRouter();
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
+  const [remember, setRemember] = useState(true);
+  const [errors, setErrors] = useState<{ identifier?: string; password?: string }>({});
+  const [formError, setFormError] = useState('');
+  const [busy, setBusy] = useState(false);
 
-  // Logged-in guard: if the session is already authenticated, route to the
-  // role home instead of showing the login form / trapping Back.
+  // already logged in -> straight to the user's home
   useEffect(() => {
-    if (isLoggedIn({ token, role })) {
-      router.replace(ROLE_HOME[role!]);
-    }
+    if (ready && isLoggedIn({ token, role })) router.replace(ROLE_HOME[role!]);
   }, [ready, token, role, router]);
 
-  const set = (key: 'email' | 'password') => (e: ChangeEvent<HTMLInputElement>) =>
-    setForm((current) => ({ ...current, [key]: e.target.value }));
-
-  const submit = async (e: FormEvent<HTMLFormElement>) => {
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    setError('');
-    setMsg('');
+    const next: typeof errors = {};
+    if (!identifier.trim()) next.identifier = 'Enter your email or phone number';
+    if (!password) next.password = 'Password is required';
+    setErrors(next);
+    setFormError('');
+    if (Object.keys(next).length > 0) return; // no request when the form is empty
 
-    const fe = { email: '', password: '' };
-    const email = form.email.trim();
-
-    if (!email) {
-      fe.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      fe.email = 'Enter a valid email';
+    setBusy(true);
+    const r = await api(null, '/auth/login', { method: 'POST', body: { identifier: identifier.trim(), password } });
+    setBusy(false);
+    if (!r.ok) {
+      console.error('login failed:', r.status, r.data);
+      setFormError(r.status === 401 ? 'Wrong email/phone or password.' : errorOf(r));
+      return;
     }
-
-    if (!form.password) {
-      fe.password = 'Password is required';
-    }
-
-    setFieldError(fe);
-
-    // Required: prevents any API request when validation fails.
-    if (fe.email || fe.password) return;
-
-    setLoading(true);
-
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          password: form.password,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error ?? data.message ?? 'Invalid email or password');
-        return;
-      }
-
-      login(data.token, data.role);
-      setMsg(`Login successful as ${data.role}. ✅`);
-
-      // Clear the one-shot login from browser history so the Back button never
-      // lands a logged-in user back on /login (Back-button polish).
-      router.replace('/');
-      router.replace(
-        ROLE_HOME[data.role as 'admin' | 'driver' | 'student' | 'parent']
-      );
-    } catch (err) {
-      console.error('Login failed:', err);
-      setError('Server error — is the dev server running?');
-    } finally {
-      setLoading(false);
-    }
-  };
+    login(r.data.token, r.data.role as Role, remember);
+    router.replace(ROLE_HOME[r.data.role as Role]);
+  }
 
   return (
-    <main className={styles.page}>
-      <div className={styles.card}>
-        <h1 className={styles.title}>Welcome Back</h1>
-        <p className={styles.subtitle}>Sign in to continue to BusBuddy</p>
-
-        <form onSubmit={submit} noValidate>
-          <div className={styles.field}>
-            <div className={styles.fieldInner}>
-              <span className={styles.icon} aria-hidden>
-                👤
-              </span>
-              <input
-                className={styles.input}
-                type="email"
-                placeholder="Email"
-                value={form.email}
-                onChange={set('email')}
-                aria-label="Email"
-                aria-invalid={!!fieldError.email}
-              />
-            </div>
-          </div>
-          {fieldError.email && (
-            <p className={styles.fieldError}>{fieldError.email}</p>
-          )}
-
-          <div className={styles.field}>
-            <div className={styles.fieldInner}>
-              <span className={styles.icon} aria-hidden>
-                🔒
-              </span>
-              <input
-                className={styles.input}
-                type={showPw ? 'text' : 'password'}
-                placeholder="Password"
-                value={form.password}
-                onChange={set('password')}
-                aria-label="Password"
-                aria-invalid={!!fieldError.password}
-              />
-              <button
-                type="button"
-                className={styles.eyeBtn}
-                aria-label={showPw ? 'Hide password' : 'Show password'}
-                onClick={() => setShowPw(!showPw)}
-              >
-                {showPw ? '🙈' : '👁️'}
-              </button>
-            </div>
-          </div>
-          {fieldError.password && (
-            <p className={styles.fieldError}>{fieldError.password}</p>
-          )}
-
-          <button
-            type="submit"
-            className={styles.submit}
-            disabled={loading}
-          >
-            {loading ? 'Signing in...' : 'Sign In →'}
-          </button>
-        </form>
-
-        {msg && <p className={styles.success}>{msg}</p>}
-        <ErrorMessage message={error} />
-        <p className={styles.createAccount}>
-          Don't have an account?{' '}
-          <a href="/get-started">Create Account</a>
-        </p>
-      </div>
-    </main>
+    <AuthShell>
+      <h1 className="bb-auth-title">Welcome Back!</h1>
+      <p className="bb-auth-sub">Log in to continue your journey.</p>
+      <form onSubmit={onSubmit} noValidate className="bb-stack">
+        <Field icon="user" name="identifier" placeholder="Email or phone number" value={identifier} onChange={setIdentifier} error={errors.identifier} autoComplete="username" />
+        <Field icon="lock" type="password" name="password" placeholder="Password" value={password} onChange={setPassword} error={errors.password} autoComplete="current-password" />
+        <label className="bb-row bb-small" style={{ cursor: 'pointer', gap: 8 }}>
+          <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+          Remember me
+        </label>
+        {formError && <div className="bb-alert bb-alert-error" role="alert">{formError}</div>}
+        <button className="bb-btn bb-btn-block" disabled={busy} type="submit">
+          {busy ? <span className="bb-spinner" /> : <>Log In <Icon name="chevron" size={18} /></>}
+        </button>
+      </form>
+      <p style={{ textAlign: 'center', marginTop: '1rem' }} className="bb-small bb-muted">
+        Don&apos;t have an account? <Link href="/get-started" style={{ color: 'var(--bb-cyan)', fontWeight: 700 }}>Sign up</Link>
+      </p>
+    </AuthShell>
   );
 }

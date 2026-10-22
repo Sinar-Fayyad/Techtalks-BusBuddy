@@ -1,0 +1,24 @@
+.wrap { position: relative; }
+.bell {
+  position: relative; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; cursor: pointer;
+  color: #fff; background: rgba(255, 255, 255, 0.08); border: 1px solid var(--bb-line);
+}
+.bell:hover { background: rgba(255, 255, 255, 0.16); }
+.badge {
+  position: absolute; top: -3px; right: -3px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px;
+  background: var(--bb-pink); color: #fff; font-size: 11px; font-weight: 800; display: grid; place-items: center;
+  box-shadow: 0 0 10px rgba(255, 61, 139, 0.7);
+}
+.panel {
+  position: absolute; right: 0; top: 52px; width: min(380px, 92vw); max-height: 70vh; overflow-y: auto; z-index: 60;
+  background: rgba(12, 20, 110, 0.98);
+}
+.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.list li { display: flex; gap: 10px; padding: 0.6rem 0.7rem; border-radius: 12px; cursor: pointer; }
+.unread { background: rgba(0, 229, 255, 0.12); border: 1px solid rgba(0, 229, 255, 0.35); }
+.read { background: rgba(255, 255, 255, 0.04); border: 1px solid transparent; opacity: 0.8; }
+.emoji { font-size: 1.3rem; }
+.title { font-weight: 700; font-size: 0.9rem; }
+.body { font-size: 0.82rem; color: var(--bb-text-dim); margin-top: 2px; }
+.time { font-size: 0.72rem; color: rgba(255, 255, 255, 0.5); margin-top: 3px; }
+.link { background: transparent; border: 0; color: var(--bb-cyan); cursor: pointer; font-weight: 700; font-size: 0.8rem; }

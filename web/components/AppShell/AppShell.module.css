@@ -1,0 +1,45 @@
+.layout { display: flex; }
+.sidebar {
+  position: sticky; top: 0; height: 100vh; width: 230px; flex: none; padding: 1.1rem 0.9rem; display: flex; flex-direction: column; gap: 1.2rem;
+  background: linear-gradient(180deg, rgba(4, 9, 60, 0.92), rgba(8, 14, 95, 0.88)); border-right: 1px solid var(--bb-line);
+  backdrop-filter: blur(10px);
+}
+.brand { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; color: #fff; }
+.brand b { font-size: 1.35rem; display: block; line-height: 1.1; }
+.brand em { font-style: normal; color: var(--bb-cyan); }
+.brand small { display: block; font-size: 0.62rem; color: var(--bb-text-dim); line-height: 1.2; }
+.nav { display: flex; flex-direction: column; gap: 0.45rem; }
+.link {
+  display: flex; align-items: center; gap: 0.8rem; padding: 0.75rem 0.9rem; border-radius: 14px; text-decoration: none;
+  color: rgba(255, 255, 255, 0.85); font-weight: 600; border: 1px solid transparent;
+}
+.link:hover { background: rgba(255, 255, 255, 0.08); }
+.active {
+  color: #fff; background: linear-gradient(135deg, rgba(0, 229, 255, 0.85), rgba(79, 107, 255, 0.85), rgba(255, 43, 214, 0.6));
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.35);
+}
+.logout {
+  margin-top: auto; display: flex; align-items: center; gap: 0.7rem; padding: 0.7rem 0.9rem; border-radius: 14px; cursor: pointer;
+  background: rgba(255, 61, 139, 0.1); border: 1px solid rgba(255, 61, 139, 0.4); color: #ff9ec4; font-weight: 700;
+}
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.top { display: flex; justify-content: flex-end; padding: 0.9rem 1.6rem 0; }
+.topRight { display: flex; align-items: center; gap: 1rem; }
+.user { display: flex; align-items: center; gap: 0.6rem; }
+.userText { display: flex; flex-direction: column; line-height: 1.15; }
+.userText small { color: var(--bb-text-dim); font-size: 0.75rem; }
+.content { padding: 0.5rem 1.6rem 3rem; max-width: 1180px; width: 100%; }
+
+@media (max-width: 860px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    position: fixed; z-index: 50; bottom: 0; left: 0; right: 0; top: auto; height: auto; width: 100%; flex-direction: row;
+    padding: 0.4rem 0.5rem; gap: 0; border-right: 0; border-top: 1px solid var(--bb-line);
+  }
+  .brand, .logout { display: none; }
+  .nav { flex-direction: row; width: 100%; justify-content: space-around; gap: 0.2rem; }
+  .link { flex-direction: column; gap: 0.15rem; padding: 0.4rem 0.6rem; font-size: 0.7rem; }
+  .content { padding: 0.5rem 1rem 6rem; }
+  .top { padding: 0.8rem 1rem 0; }
+  .userText { display: none; }
+}
