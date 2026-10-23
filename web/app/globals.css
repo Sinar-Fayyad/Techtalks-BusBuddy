@@ -53,7 +53,12 @@ a { color: inherit; }
 /* ---------- full-page backgrounds ---------- */
 .bb-auth-bg {
   min-height: 100vh;
-  background: linear-gradient(rgba(5, 11, 70, 0.15), rgba(5, 11, 70, 0.15)), url('/busbuddy-bg.jpg') center / cover no-repeat fixed;
+  background-color: #1a2bd0;
+  background-image: url('/busbuddy-bg.jpg');
+  background-size: cover;
+  background-position: left top;
+  background-repeat: no-repeat;
+  background-attachment: scroll;
 }
 .bb-app-bg {
   min-height: 100vh;

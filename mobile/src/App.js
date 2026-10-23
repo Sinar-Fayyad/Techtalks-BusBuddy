@@ -1,49 +1,54 @@
-// mobile/src/App.js
-
+// mobile/src/App.js — BusBuddy (Expo). No react-navigation: a small state machine.
+//   signed out: welcome -> role -> signup / login      signed in: permissions gate -> Shell (tabs per role)
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, BackHandler } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import LoginScreen from './screens/LoginScreen';
-import RegisterScreen from './screens/RegisterScreen';
-import RoleSelectScreen from './screens/RoleSelectScreen';
-import HomeScreen from './screens/HomeScreen';
-import DriverTripScreen from './screens/DriverTripScreen';
-import DriverStatusScreen from './screens/DriverStatusScreen';
+import { StatusBar } from 'expo-status-bar';
 import WelcomeScreen from './screens/WelcomeScreen';
-
-const ROLE_LABEL = { student: 'Students', parent: 'Parents', driver: 'Drivers' };
+import RoleSelectScreen from './screens/RoleSelectScreen';
+import LoginScreen from './screens/LoginScreen';
+import SignUpScreen from './screens/SignUpScreen';
+import PermissionsScreen from './screens/PermissionsScreen';
+import Shell from './Shell';
 
 export default function App() {
-  const [loading, setLoading] = useState(true);
-  const [screen, setScreen] = useState('welcome'); // 'welcome' | 'role' | 'login' | 'register'
-  const [pendingRole, setPendingRole] = useState('driver');
+  const [boot, setBoot] = useState(true);
+  const [stage, setStage] = useState('welcome'); // welcome | role | login | signup
+  const [signupRole, setSignupRole] = useState('student');
   const [session, setSession] = useState(null); // { token, role }
-  const [driverView, setDriverView] = useState('trip'); // 'trip' | 'status'
+  const [permDone, setPermDone] = useState(false);
 
   useEffect(() => {
     (async () => {
       try {
         const token = await SecureStore.getItemAsync('bb_token');
         const role = await SecureStore.getItemAsync('bb_role');
-        if (token) setSession({ token, role });
+        if (token && role) setSession({ token, role });
+      } catch (e) {
+        console.error('Could not read stored session', e);
       } finally {
-        setLoading(false);
+        setBoot(false);
       }
     })();
   }, []);
 
-  // ← T6: a slow or failing keychain write must not strand the user on Login
-  const handleLogin = useCallback(async (token, role) => {
+  // "Remember me" ON -> stored in the keychain · OFF -> only kept in memory until the app closes
+  const handleLogin = useCallback(async (token, role, remember) => {
     try {
-      await SecureStore.setItemAsync('bb_token', token);
-      await SecureStore.setItemAsync('bb_role', role);
+      if (remember) {
+        await SecureStore.setItemAsync('bb_token', token);
+        await SecureStore.setItemAsync('bb_role', role);
+      } else {
+        await SecureStore.deleteItemAsync('bb_token');
+        await SecureStore.deleteItemAsync('bb_role');
+      }
     } catch (e) {
       console.error('Could not persist session', e);
     }
+    setPermDone(false);
     setSession({ token, role });
   }, []);
 
-  // ← T6: try/finally — the session always clears, even if SecureStore throws
   const handleLogout = useCallback(async () => {
     try {
       await SecureStore.deleteItemAsync('bb_token');
@@ -51,70 +56,46 @@ export default function App() {
     } catch (e) {
       console.error('Could not clear stored session', e);
     } finally {
-      setScreen('welcome'); // lands back on the welcome screen
-      setDriverView('trip');
+      setStage('welcome');
       setSession(null);
     }
   }, []);
 
-  // ← T6: stable identities — these feed a BackHandler effect downstream
-  const openStatus = useCallback(() => setDriverView('status'), []);
-  const closeStatus = useCallback(() => setDriverView('trip'), []);
-  const goRole = useCallback(() => setScreen('role'), []);
-  const goLogin = useCallback(() => setScreen('login'), []);
-  const chooseRole = useCallback((role) => {
-    setPendingRole(role);
-    setScreen('register');
-  }, []);
+  const permissionsDone = useCallback(() => setPermDone(true), []);
 
-  if (loading) {
-    return <View style={s.center}><ActivityIndicator size="large" color="#f59e0b" /></View>;
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (session) return false;
+      if (stage === 'signup') { setStage('role'); return true; }
+      if (stage === 'role' || stage === 'login') { setStage('welcome'); return true; }
+      return false;
+    });
+    return () => sub.remove();
+  }, [session, stage]);
+
+  if (boot) {
+    return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#050b3a' }}><ActivityIndicator size="large" color="#00e5ff" /></View>;
   }
 
+  let screen;
   if (session) {
-    if (session.role === 'driver') {
-      if (driverView === 'status') {
-        return (
-          <DriverStatusScreen
-            token={session.token}
-            onBack={closeStatus}
-            onLogout={handleLogout}
-            onSessionExpired={handleLogout}
-          />
-        );
-      }
-      return (
-        <DriverTripScreen
-          token={session.token}
-          onSessionExpired={handleLogout}
-          onLogout={handleLogout}
-          onOpenStatus={openStatus}
-        />
-      );
-    }
-    return <HomeScreen role={session.role} onLogout={handleLogout} />;
+    screen = !permDone
+      ? <PermissionsScreen role={session.role} onDone={permissionsDone} />
+      : <Shell token={session.token} role={session.role} onLogout={handleLogout} />;
+  } else if (stage === 'welcome') {
+    screen = <WelcomeScreen onGetStarted={() => setStage('role')} onLogin={() => setStage('login')} />;
+  } else if (stage === 'role') {
+    screen = <RoleSelectScreen onContinue={(role) => { setSignupRole(role); setStage('signup'); }} onBack={() => setStage('welcome')} />;
+  } else if (stage === 'signup') {
+    screen = <SignUpScreen role={signupRole} onLogin={handleLogin} onBack={() => setStage('role')} onGoLogin={() => setStage('login')} />;
+  } else {
+    screen = <LoginScreen onLogin={handleLogin} onGoSignUp={() => setStage('role')} onBack={() => setStage('welcome')} />;
   }
 
-  if (screen === 'welcome') {
-    return <WelcomeScreen onGetStarted={goRole} onLogin={goLogin} />;
-  }
-
-  if (screen === 'role') {
-    return <RoleSelectScreen onContinue={chooseRole} onBack={() => setScreen('welcome')} />;
-  }
-
-  if (screen === 'register') {
-    return (
-      <RegisterScreen
-        role={ROLE_LABEL[pendingRole] || 'Drivers'}
-        onBack={() => setScreen('role')}
-      />
-    );
-  }
-
-  return <LoginScreen onLogin={handleLogin} onGoRegister={goRole} />;
+  return (
+    <View style={{ flex: 1 }}>
+      <StatusBar style="light" />
+      {screen}
+    </View>
+  );
 }
-
-const s = StyleSheet.create({
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f172a' },
-});
