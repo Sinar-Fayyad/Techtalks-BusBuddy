@@ -29,15 +29,6 @@ const ROLES = [
 
 export default function RoleSelectScreen({ onContinue = () => {}, onBack = () => {} }) {
   const [role, setRole] = useState(null);
-  const [hint, setHint] = useState('');
-
-  const pressContinue = () => {
-    if (!role) {
-      setHint('Select a role to continue.');
-      return;
-    }
-    onContinue(role);
-  };
 
   return (
     <LinearGradient colors={BG} locations={BG_LOC} start={{ x: 0.3, y: 0 }} end={{ x: 0.7, y: 1 }} style={s.flex}>
@@ -78,7 +69,7 @@ export default function RoleSelectScreen({ onContinue = () => {}, onBack = () =>
           {ROLES.map((r) => {
             const on = role === r.id;
             return (
-              <Pressable key={r.id} onPress={() => { setRole(r.id); setHint(''); }} style={({ pressed }) => [s.card, on && s.cardOn, pressed && s.cardPressed]}>
+              <Pressable key={r.id} onPress={() => { setRole(r.id); onContinue(r.id); }} style={({ pressed }) => [s.card, on && s.cardOn, pressed && s.cardPressed]}>
                 <LinearGradient
                   colors={on ? ['#25f0e0', '#7c5cf6', '#ff45d6'] : ['#2ee6f0', '#7c5cf6', '#ff45d6']}
                   start={{ x: 0, y: 0 }}
@@ -93,18 +84,6 @@ export default function RoleSelectScreen({ onContinue = () => {}, onBack = () =>
             );
           })}
 
-          {hint !== '' && <Text style={s.hint}>{hint}</Text>}
-
-          <Pressable
-            onPress={pressContinue}
-            android_ripple={{ color: 'rgba(255,255,255,0.25)' }}
-            style={({ pressed }) => [s.ctaWrap, role === null && s.ctaDisabled, pressed && s.ctaPressed]}
-          >
-            <LinearGradient colors={CTA} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={s.cta}>
-              <Text style={s.ctaText}>Continue</Text>
-              <Ionicons name="arrow-forward" size={20} color="#fff" style={{ marginLeft: 10 }} />
-            </LinearGradient>
-          </Pressable>
         </ScrollView>
       </SafeAreaView>
     </LinearGradient>

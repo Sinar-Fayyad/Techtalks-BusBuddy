@@ -28,7 +28,7 @@
 .user { display: flex; align-items: center; gap: 0.6rem; }
 .userText { display: flex; flex-direction: column; line-height: 1.15; }
 .userText small { color: var(--bb-text-dim); font-size: 0.75rem; }
-.content { padding: 0.5rem 1.6rem 3rem; max-width: 1180px; width: 100%; }
+.content { padding: 0.5rem 1.6rem 3rem; width: 100%; }
 
 @media (max-width: 860px) {
   .layout { flex-direction: column; }

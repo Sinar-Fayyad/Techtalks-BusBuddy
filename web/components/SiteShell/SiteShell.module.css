@@ -1,0 +1,14 @@
+.page {
+  min-height: 100vh; display: flex; flex-direction: column; padding: 1.2rem 1.6rem 2rem;
+  background:
+    radial-gradient(circle at 15% 0%, rgba(0, 229, 255, 0.35), transparent 40%),
+    radial-gradient(circle at 90% 60%, rgba(255, 43, 214, 0.35), transparent 45%),
+    linear-gradient(160deg, #0a3fd6 0%, #3b1bd0 55%, #6a1bd6 100%);
+}
+.nav { width: 100%; max-width: 1180px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; color: #fff; font-weight: 800; font-size: 1.6rem; }
+.accent { color: var(--bb-cyan); }
+.links { display: flex; gap: 1.8rem; }
+.links a { color: rgba(255, 255, 255, 0.9); text-decoration: none; font-weight: 600; padding-bottom: 4px; border-bottom: 2px solid transparent; }
+.links a:hover, .activeLink { border-bottom-color: var(--bb-cyan) !important; }
+@media (max-width: 700px) { .links { gap: 1rem; font-size: 0.9rem; } }
