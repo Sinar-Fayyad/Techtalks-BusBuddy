@@ -1,75 +1,99 @@
 # BusBuddy — PROJECT_STATE.md
 
-## How this file works
+Final state of the project (24/10/2026, end of the TechTalks internship).
+Single sources of truth:
+Endpoints → `web/docs/API_CONTRACT.md` (v13, entries 1–48) · Database → `web/database/schema.sql` (v5) · Tests → `web/docs/TESTING.md`
 
-- DURING the sprint: finished a task? → append your block at the very bottom (RAW ZONE). No formatting stress, no editing others' entries.
-- END of week: the AI rewrites the whole file (clean state + weekly recap) → the clean version starts the next sprint.
-- Single sources of truth — do NOT duplicate them here:
-  Endpoints → web/docs/API_CONTRACT.md · Database → database/schema.sql · Tests → web/docs/TESTING.md
+## What BusBuddy is
 
-## Current state (cleaned 16/10 — mid Sprint 5)
+University students find and book independent bus drivers. A parent can see their child's live location **only between the moment the child scans the boarding QR code and the moment they scan the exit QR code**. Drivers' licenses are checked by an admin before a driver can offer trips. Payment happens outside the app. Web app + mobile app, one shared REST API and one MySQL database.
+
+## Current state (cleaned 24/10)
 
 ### Stack
-
-- web/ — Next.js App Router: UI in app/, API in app/api/ · Leaflet 1.9.4 + OpenStreetMap (client-only via next/dynamic) · welcome asset: public/busbuddy-illustration.jpg
-- mobile/ — Expo/React Native: src/App.js + src/screens/ (Login/Register/Home/DriverTrip/DriverStatus) + shared Button/Input · expo-linear-gradient, expo-secure-store
-- DB — MySQL (WAMP), busbuddy_app, all InnoDB → database/schema.sql · seed → database/seed.sql
-- Auth — JWT { userId, role } 7d · roles: admin/driver/student/parent · web: localStorage bb_token/bb_role via auth-context · mobile: expo-secure-store · signup role="admin" → 403
+- **web/** — Next.js 16 (App Router, Turbopack), React 19, TypeScript. Pages in `app/`, REST API in `app/api/`. Leaflet 1.9.4 + OpenStreetMap, `qrcode.react`. Styling: design tokens + shared classes in `app/globals.css`, CSS modules per component.
+- **mobile/** — Expo (SDK 57) / React Native 0.86. `src/App.js` (small state machine, no react-navigation), `src/Shell.js` (tabs per role), `src/screens/`. `expo-camera` (QR scan), `expo-location` (driver GPS), `expo-image-picker` (license photo), `expo-secure-store` (session), `react-native-webview` (Leaflet map), `react-native-qrcode-svg`.
+- **DB** — MySQL 8 (WAMP), database `BusBuddy_app`, all InnoDB → `web/database/schema.sql`, seed → `web/database/seed.sql`.
+- **Auth** — JWT `{ userId, role }` valid 7 days · roles `admin | driver | student | parent` · passwords hashed with bcryptjs (cost 10) · web token in `localStorage` ("Remember me" on) or `sessionStorage` (off) · mobile token in `expo-secure-store` · `role: "admin"` can never be created through sign-up (403).
+- **Live updates** — polling (10 s while a trip is live, 30 s otherwise). No websockets, no push notifications.
 
 ### Setup on a new machine
-
-1. web/.env.local → DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, JWT_SECRET, DB_PORT (ports differ per machine; ask, never hardcode)
-2. Fresh DB → run database/schema.sql, then database/seed.sql. Starting/stopping trips during testing leaves extra ended trips → re-run seed.sql before any demo.
-3. Recreate web/uploads/ license files per machine (gitignored — recipes in the T14 PR description)
-4. npm install in web/ AND mobile/ — mandatory after any pull
+1. `web/.env.local` → `DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT, JWT_SECRET` (ports differ per machine; never hardcode, never commit).
+2. Fresh DB → import `web/database/schema.sql`, then `web/database/seed.sql`. Full reset: `DROP DATABASE IF EXISTS BusBuddy_app;` then import both again.
+3. Recreate the seed license files in `web/uploads/` (gitignored): `seed-driver-license.png` and `seed-driver2-license.pdf` (any small PNG / PDF).
+4. `npm install` in `web/` AND `mobile/` — mandatory after every pull. Mobile first install: `npx expo install expo-camera expo-location react-native-webview react-native-svg react-native-qrcode-svg`.
+5. Mobile: set `EXPO_PUBLIC_API_URL=http://<PC LAN IPv4>:3000` in `mobile/.env`, then `npx expo start -c`. Test **web GPS on `localhost`**, not the LAN IP (browsers block geolocation on plain http LAN addresses).
+6. Check: with the server running, `node web/tests/api-smoke.mjs` on a FRESH seed → 159 checks must pass (it creates data, so re-seed afterwards).
 
 ### What exists now
 
-- Welcome + onboarding: / (welcome, illustration bg) · /get-started role chooser · shared ErrorMessage on both
-- Admin: /admin/home · /admin/drivers (verify/reject, inline license preview)
-- Driver web: /driver/register (201s but no session/redirect — F4) · /driver/status · /driver/home = Start/Stop + GpsShare GPS + "My trips" (refresh mid-trip shows the correct Stop state)
-- Student: /student/home — always-on polling (30s idle / 10s active), auto-detects a trip starting, live Leaflet map, "Trip completed" end state, stale indicator greys out after 30s
-- Parent: /parent/home — restyled (greeting header, "Tracking Active" banner, "My Children" cards with status badges, selected child's trip card + live map, quick actions); children selector + the 3 trip states intact · Add-child card (entry 12) still 400s — F3
-- Onboarding wiring: Driver → /driver/register ✅ · Student/Parent → /student/home, /parent/home; signed-out visitors bounce to /login (F5) · /student/register unreachable from UI · /parent/register 404
-- Signup: driver/student/parent → 201 · admin → 403, 0 rows · unknown/omitted role → driver · dup → 409 · missing → 400
-- Mobile: DriverTripScreen (start/stop) + DriverStatusScreen (verified/pending/rejected + license download) · no GPS sharing on mobile (web-only)
-- Components: Button / ErrorMessage / Input / LeafletMap / LiveBusMap / GpsShare — all in folders (index.tsx + module.css)
-- APIs — contract v11 (entries 1–18)
-- Testing: Sprint 4 pass — 26 checks → 17 ✅ · 1 ⚠️ · 8 ❌ (W41–W45, TESTING.md)
+**Web pages**
+- Public: `/` (one-screen landing), `/about`, `/features`, `/contact`, `/get-started` (role picker → straight to sign-up), `/login` (email or phone, remember me), `/student/register`, `/parent/register`, `/driver/register` (license upload during sign-up).
+- Student: `/student/home` (next ride, live map, trips to book), `/student/bookings` (Book a ride: search + sort; My bookings: cancel), `/student/profile` (edit, 6-digit link code, linked parents), `/student/settings`.
+- Parent: `/parent/home`, `/parent/children`, `/parent/map` (all children, hover name, click details), `/parent/link` (student email + code), `/parent/profile`.
+- Driver: `/driver/home` (start/stop trip, automatic GPS sharing, boarding/exit QR, alerts, report issue), `/driver/trips` (add / edit / cancel / delete), `/driver/students`, `/driver/profile` (personal, license, vehicle & route, settings).
+- Admin: `/admin/home` (stats, pending drivers, open issues), `/admin/drivers` (verify / reject, license preview), `/admin/users`, `/admin/trips`, `/admin/issues` (resolve).
+- Everywhere after login: notification bell (polls every 30 s), role guards (wrong role → own home, signed out → `/login`).
+
+**Mobile screens** — Welcome (fits the phone), role picker, login, 3 sign-ups, permissions (driver = location, student = camera, parent = none), then per role:
+- Student: Home, Bookings, **Scan** (boarding / exit QR), Settings, Profile (link code, parents).
+- Parent: Home, Children, Live Map, Link Student, Profile.
+- Driver: Home (start/stop, GPS ping every ≥10 s, QR codes, alerts, report issue), Trips, Students, Profile.
+- Notification bell on every screen.
+
+**Backend** — API contract v13: auth (email/phone login, signup, me, change password), driver profile + license, scheduled trips (CRUD), trips start/stop/location, QR codes, board/exit, bookings, secure child linking, parent live list, notifications, vehicle issues, admin (stats, users, trips, issues, driver review). Shared helpers in `web/lib/`: `api-auth.ts`, `trip-codes.ts`, `trip-status.ts`, `trip-sql.ts`, `notify.ts`, `validation.ts`.
+
+**Database (schema v5)** — `users, drivers, scheduled_trips, trips, trip_students, bookings, parent_student, link_codes, link_attempts, notifications, vehicle_issues`.
+
+### Key product rules (implemented on the server)
+- A student can book several trips (same or different drivers); seats are enforced (409 "Trip is full"); boarding requires a booking for THAT trip.
+- Parent location visibility: student sees the bus while `waiting` + `onboard`; **parent only while `onboard`** (between the two scans); admin always. Implemented once in `lib/trip-status.ts`.
+- Child linking: student creates a one-time 6-digit code (10 min); parent enters the student's email + code; max 5 wrong attempts / 15 min per parent; the student can remove a parent at any time.
+- Vehicle issue report → notifies parents of students on board, drivers of other running buses within 3 km (GPS fresher than 2 min), and all admins; one report per 2 minutes per driver.
+- Driver license: admin must verify before the driver can create trips; uploading a new license sets the status back to `pending`.
 
 ### Conventions (rules)
+- Contract first: never invent endpoints — update `API_CONTRACT.md` in the same PR; entry numbers are never renumbered (entry 19 was removed in v13).
+- Never hardcode local config (DB port, LAN IP). Never commit `.env*` or `web/uploads/`.
+- All web API calls go through `lib/client-api.ts`; all mobile calls through `src/net.js`. Errors: inline message + `console.error`.
+- Components live in folders (`index.tsx` + `module.css`). Shared look: `globals.css` tokens and `bb-*` classes.
+- DB changed → update `schema.sql` tables + CHANGE LOG, and `seed.sql`, in the same PR.
+- Every task: success AND error cases tested before the PR; results go to `TESTING.md`.
 
-- Never invent endpoints — update the contract in the same PR; entry numbers never renumbered
-- Never hardcode local config; mobile BASE_URL = PC LAN IPv4 (test GPS sharing on localhost, not the LAN IP)
-- Web UI: shared components + CSS variables; errors = ErrorMessage + console.error
-- Components live in folders (index.tsx + module.css)
-- DB changed? → schema.sql change log (same PR) · Test data → database/seed.sql
-- Every task: success AND error cases tested before the PR; results appended to TESTING.md
-
-### Known gaps (priority order)
-
-1. **F3 (blocker):** entry 12 email mode missing in app/api/parents/me/children/route.ts — UI + contract v11 use { email }; route is studentId-only → 400. Parent linking dead until fixed.
-2. **F4:** /driver/register discards the token and never redirects to /driver/home.
-3. **F5:** chooser Student/Parent cards dead-end at /login; /parent/register 404; /student/register unreachable from UI.
-4. Mobile GPS sharing (expo-location) + mobile parity gaps.
-5. UI mockup parity; bus-list/booking needs NEW contract endpoints first (design before build).
-6. Endpoint 13 has no admin UI.
-7. Parents can't **unlink** a child — no endpoint exists (entry 12 only links, entry 15 only lists). Needs a new contract entry (e.g. DELETE /parents/me/children/{studentId}) + route + UI before it can exist.
+### Known gaps / not built
+1. **Forgot password (OTP by email)** — designed in the mockups, not built (needs an email provider).
+2. **Mobile has never been run on a real phone by the team** — the code passes lint/bundle checks only. See `TESTING.md` (MM list).
+3. Mobile cannot open a driver's license file (admin reviews on the web); drivers can re-upload a photo.
+4. Expo Go shares the driver's GPS only while the app is open on screen (no background location).
+5. Notifications are in-app only (no push).
+6. No payments, ratings, recurring trips, seat selection, profile photos, or admin user management (delete / block).
+7. Login has no rate limit; tokens last 7 days and cannot be revoked (no refresh tokens).
 
 ### Weekly recaps
-
 - Sprint 0 (→12/09): signup/login, driver profile, admin approval, registration UIs. 20 ✅
-- Sprint 1 (15–18/09): sessions + guards, driver status, license permissions, trips APIs, mobile refactor. W1–W14 ✅ M1–M6 ✅
-- Sprint 2 (21–24/09, tested 29/09): 4 roles + link tables + GPS columns · driver start/stop · parent/student trip-status · admin inline preview. 34 ✅ · 1 ❌ (W39) · fixes: auth-context 4-role refresh, seed UTC
-- Sprint 3 (01–04/10, tested 04/10): live GPS map (entry 16, GpsShare, student map), GET active trip (17), trip history (18), endpoint 13, /admin/home (W39 fixed), mobile DriverTripScreen. Contract v9. TESTING.md W40+
-- Sprint 4 (05–11/10, tested 11/10): signup admin-block (contract v10→v11) · welcome + role chooser + illustration bg · T9b refresh fix · student signup · F1 polling fix · parent link-child UI · mobile driver status · onboarding wiring · ErrorMessage on welcome/chooser · auth-page guards · test pass 17✅/1⚠️/8❌, findings **F3/F4/F5**
-- Sprint 5 (13–16/10, in progress): mobile driver parity (T4 status + back/logout, T5 My trips, T6 buffer/drop-safe) · student home parity (T7) · parent home restyle (T8) · GpsShare folder conversion. No new findings.
+- Sprint 1 (15–18/09): sessions + guards, driver status, license permissions, trips APIs, mobile refactor. Web 14/14 ✅, mobile 6/6 ✅
+- Sprint 2 (21–24/09, tested 29/09): 4 roles + link tables + GPS columns, driver start/stop, parent/student trip status, admin inline preview. 34 ✅ · 1 ❌ (fixed)
+- Sprint 3 (01–04/10): live GPS map, trip history, admin /admin/home, mobile DriverTripScreen, seed with an active trip.
+- Sprint 4 (05–11/10): signup admin-block, welcome + role chooser, student sign-up, polling fix, parent link UI, mobile driver status. Test pass 17 ✅ / 1 ⚠️ / 8 ❌ → findings F3/F4/F5.
+- Sprint 5 (13–16/10): mobile driver parity, student home parity, parent home restyle. T7 8/8 ✅.
+- **Final sprint (20–24/10)** — after the designer's mockups (52 slides) were reviewed: backend v12/v13 (per-trip booking, phone login, QR boarding/exit, secure child linking, notifications, vehicle issues, admin endpoints; 159-check API smoke test), full web redesign (public pages, student, parent, driver, admin), complete mobile app, new docs. F3 replaced by the code-based linking, F4 and F5 fixed.
+
+### Team and contributions
+| Member | Contribution (from the sprint log) |
+|---|---|
+| Sino (Sinar Fayyad) | Tech-lead; Sprint 0/1/3/4 integration testing; DB migration (roles, link tables); docs; final redesign (backend v12/v13, web, mobile) with an AI assistant |
+| Jad | Trips API and mobile trip screen (T8), mobile landing / sign-up / role picker |
+| Wassim | Seed data (T13/T14), Sprint 2 integration testing |
+| Tamara | Web UI and navigation corrections |
+| Designer | UI mockups (52-slide PowerPoint: web + mobile) |
+
+Workflow: GitHub Desktop, branches per task, PRs into `dev`, each member took 3 tasks per sprint and appended a block to the RAW ZONE below; sprint tasks were done with an AI coding assistant (freebuff + shared prompts); the final redesign used Claude. Review all generated code before relying on it.
 
 ---
 
-## ⬇️ RAW ZONE — append your block below this line, don't touch anything above
+## RAW ZONE — append your block below this line, don't touch anything above
 
-Format (the end-of-task prompt already generates this — just paste it):
+Format:
 
 ## [date] — [name] — [task]
 
