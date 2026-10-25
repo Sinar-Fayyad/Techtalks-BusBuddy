@@ -2,8 +2,9 @@
 // apiFetch(path, token, options) → { status, ok, data }  (never throws)
 // ← T6: request timeout + AbortController + always resolve to a value
 
-// Expo Go reads EXPO_PUBLIC_* at bundle time; the fallback is your PC's LAN IP.
-export const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.20:3000';
+// Expo Go reads EXPO_PUBLIC_* at bundle time; callers pass paths relative to /api.
+const serverUrl = (process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.20:3000').replace(/\/+$/, '');
+export const BASE_URL = `${serverUrl.endsWith('/api') ? serverUrl : `${serverUrl}/api`}`;
 
 const DEFAULT_TIMEOUT_MS = 10000;
 
