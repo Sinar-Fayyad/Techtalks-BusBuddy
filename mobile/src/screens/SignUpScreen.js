@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import AuthBg from './AuthBg';
 import { Card, Field, Btn, Notice, C } from '../ui';
-import { call, upload, errOf } from '../net';
+import { call, uploadNative, errOf } from '../net';
 import { EMAIL_RE, PHONE_HINT, phoneOk } from '../format';
 
 const COPY = {
@@ -42,9 +42,7 @@ export default function SignUpScreen({ role, onLogin, onBack, onGoLogin }) {
   }
 
   async function sendLicense(token) {
-    const form = new FormData();
-    form.append('file', { uri: photo.uri, name: photo.name, type: photo.type });
-    const up = await upload(token, '/driver/license', form);
+    const up = await uploadNative(token, '/driver/license', photo);
     if (!up.ok) return errOf(up, 'License upload failed.');
     const prof = await call(token, '/driver/profile', { method: 'POST', body: { license_url: up.data.path } });
     if (!prof.ok && prof.status !== 409) return errOf(prof, 'Could not save your driver profile.');

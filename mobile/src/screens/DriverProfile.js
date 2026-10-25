@@ -5,7 +5,7 @@ import { Screen, Title, Card, Row, T, Btn, Chip, Avatar, Field, Segmented, CardT
 import { ChangePasswordCard, EditProfileSheet } from '../parts';
 import { ReportSheet } from '../driverParts';
 import { useApp } from '../ctx';
-import { call, upload, errOf } from '../net';
+import { call, uploadNative, errOf } from '../net';
 
 const STATUS_TEXT = {
   verified: 'You can appear to students and receive bookings.',
@@ -67,9 +67,10 @@ export default function DriverProfile() {
     const a = res.assets[0];
     const ext = (a.uri.split('.').pop() || 'jpg').toLowerCase() === 'png' ? 'png' : 'jpg';
     setBusy(true);
-    const form = new FormData();
-    form.append('file', { uri: a.uri, name: `license.${ext}`, type: ext === 'png' ? 'image/png' : 'image/jpeg' });
-    const up = await upload(token, '/driver/license', form);
+    const up = await uploadNative(token, '/driver/license', {
+      uri: a.uri,
+      type: ext === 'png' ? 'image/png' : 'image/jpeg',
+    });
     if (!up.ok) { setBusy(false); return setError(errOf(up)); }
     const r = await call(token, '/driver/me', { method: 'PATCH', body: { license_url: up.data.path } });
     setBusy(false);
