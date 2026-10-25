@@ -92,8 +92,10 @@ npx expo install expo-camera expo-location react-native-webview react-native-svg
 ```
 Create `mobile/.env` with your PC's LAN address:
 ```
-EXPO_PUBLIC_API_URL=http://192.168.1.20:3000
+EXPO_PUBLIC_API_URL=http://<PC-LAN-IPv4>:3000
 ```
+Find the IPv4 address with `ipconfig` (use the active Wi-Fi adapter), keep the phone on the same Wi-Fi, and restart Expo after changing the file.
+Set this to the server origin (without `/api`); the mobile client adds `/api` to requests automatically.
 ```bash
 npx expo start -c   # scan the QR code with Expo Go
 ```
