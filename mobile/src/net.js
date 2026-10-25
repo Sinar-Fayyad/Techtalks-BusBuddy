@@ -1,22 +1,37 @@
 import { apiFetch, BASE_URL } from '../api';
+import * as FileSystem from 'expo-file-system/legacy';
 
 // All network calls of the app go through here. Never throws.
 export const call = (token, path, opts) => apiFetch(path, token, opts);
 export const errOf = (r, fallback = 'Something went wrong. Please try again.') =>
   (r && r.data && r.data.error) || fallback;
 
-// multipart upload (license photo). apiFetch always JSON-encodes, so this one uses fetch directly.
-export async function upload(token, path, formData) {
+export async function uploadNative(token, path, file) {
+  const url = `${BASE_URL.replace(/\/$/, '')}${path}`;
   try {
-    const res = await fetch(`${BASE_URL.replace(/\/$/, '')}${path}`, {
-      method: 'POST',
-      headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
-      body: formData,
+    const response = await FileSystem.uploadAsync(url, file.uri, {
+      httpMethod: 'POST',
+      uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+      fieldName: 'file',
+      mimeType: file.type,
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
     });
     let data = {};
-    try { data = await res.json(); } catch { data = {}; }
-    return { ok: res.ok, status: res.status, data };
-  } catch (e) {
-    return { ok: false, status: 0, data: { error: 'Network request failed' } };
+    try {
+      data = JSON.parse(response.body);
+    } catch {
+      data = {};
+    }
+    return {
+      ok: response.status >= 200 && response.status < 300,
+      status: response.status,
+      data,
+    };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return { ok: false, status: 0, data: { error: `License upload failed: ${reason}` } };
   }
 }
