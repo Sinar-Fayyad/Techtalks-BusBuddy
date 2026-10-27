@@ -52,7 +52,7 @@ export default function StudentHome({ nav }) {
 
   return (
     <Screen refreshing={refreshing} onRefresh={refresh}>
-      <Text style={{ color: '#fff', fontSize: 28, fontWeight: '800' }}>Hi, <Text style={{ color: C.cyan }}>{firstName(me.name)}</Text></Text>
+      <Text style={{ color: '#fff', fontSize: 28, fontWeight: '800' }}>Hello, <Text style={{ color: C.cyan }}>{firstName(me.name)}</Text></Text>
       <T dim style={{ marginBottom: 12 }}>Ready for your next ride?</T>
       {error ? <Notice kind="error">{error}</Notice> : null}
 

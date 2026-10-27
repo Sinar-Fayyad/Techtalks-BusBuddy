@@ -1,197 +1,69 @@
-// mobile/src/screens/RoleSelectScreen.js
-// "Choose Your Role" — the BusBuddy role picker, adapted to a phone layout.
-
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Pressable,
-  StyleSheet,
-  ScrollView,
-  SafeAreaView,
-  StatusBar as RNStatusBar,
-  Platform,
-} from 'react-native';
-import { StatusBar } from 'expo-status-bar';
+import React from 'react';
+import { View, Text, Pressable, SafeAreaView, Platform, StatusBar as RNStatusBar } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-
-const BG = ['#1de6f4', '#1e9df7', '#5b5df8', '#8b3ff0', '#c23ff0'];
-const BG_LOC = [0, 0.2, 0.44, 0.7, 1];
-const CTA = ['#25f0e0', '#5a4ff0', '#c22ff0'];
+import AuthBg from './AuthBg';
+import { Card, Row, T, Btn, C } from '../ui';
 
 const ROLES = [
-  { id: 'student', icon: 'school', title: 'Student', sub: 'Ride to campus and beyond' },
-  { id: 'parent', icon: 'people', title: 'Parent', sub: 'Keep your loved ones safe' },
-  { id: 'driver', icon: 'bus', title: 'Driver', sub: 'Drive. Earn. Make a difference' },
+  { key: 'student', icon: 'school-outline', title: 'Student', blurb: 'Ride to campus and beyond', color: '#3b13b8' },
+  { key: 'parent', icon: 'people-outline', title: 'Parent', blurb: 'Keep your loved ones safe', color: '#00e5ff' },
+  { key: 'driver', icon: 'bus-outline', title: 'Driver', blurb: 'Drive. Earn. Make a difference', color: '#ff2bd6' },
 ];
 
-export default function RoleSelectScreen({ onContinue = () => {}, onBack = () => {} }) {
-  const [role, setRole] = useState(null);
+// Role selection screen shown after "Get Started" on the Welcome screen.
+// Tapping a role immediately proceeds to sign up for that role.
+export default function RoleSelectScreen({ onContinue, onBack }) {
+  const top = Platform.OS === 'android' ? (RNStatusBar.currentHeight || 0) : 0;
 
   return (
-    <LinearGradient colors={BG} locations={BG_LOC} start={{ x: 0.3, y: 0 }} end={{ x: 0.7, y: 1 }} style={s.flex}>
-      <StatusBar style="dark" />
-      <SafeAreaView style={s.flex}>
-        <ScrollView
-          contentContainerStyle={[
-            s.scroll,
-            { paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 0) + 12 : 16 },
-          ]}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* header: small logo + step dashes */}
-          <View style={s.header}>
-            <View style={s.headerBrand}>
-              <View style={s.miniPin}>
-                <Ionicons name="bus" size={14} color="#5312c8" />
-              </View>
-              <Text style={s.headerWord}>
-                <Text style={s.wordBus}>Bus</Text>
-                <Text style={s.wordBuddy}>Buddy</Text>
-              </Text>
-            </View>
-            <View style={s.dashes}>
-              <View style={[s.dash, s.dashOn]} />
-              <View style={s.dash} />
-              <View style={s.dash} />
-            </View>
+    <AuthBg>
+      <SafeAreaView style={{ flex: 1, paddingTop: top, paddingHorizontal: 22, paddingBottom: 14 }}>
+        <Pressable onPress={onBack} style={{ position: 'absolute', top: 8, left: 14, zIndex: 2 }} hitSlop={10}>
+          <Ionicons name="chevron-back-circle-outline" size={36} color="#fff" />
+        </Pressable>
+        <View style={{ alignItems: 'center', marginBottom: 14 }}>
+          <View style={{ width: 74, height: 74, borderRadius: 22, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', shadowColor: '#00e5ff', shadowOpacity: 0.7, shadowRadius: 16, elevation: 8 }}>
+            <Ionicons name="bus-outline" size={40} color="#3b13b8" />
           </View>
-
-          <TouchableOpacity style={s.backCircle} onPress={onBack} hitSlop={10}>
-            <Ionicons name="chevron-back" size={22} color="#ffffff" />
-          </TouchableOpacity>
-
-          <Text style={s.title}>Choose Your Role</Text>
-          <Text style={s.subtitle}>Select the role that best describes you</Text>
-
-          {ROLES.map((r) => {
-            const on = role === r.id;
-            return (
-              <Pressable key={r.id} onPress={() => { setRole(r.id); onContinue(r.id); }} style={({ pressed }) => [s.card, on && s.cardOn, pressed && s.cardPressed]}>
-                <LinearGradient
-                  colors={on ? ['#25f0e0', '#7c5cf6', '#ff45d6'] : ['#2ee6f0', '#7c5cf6', '#ff45d6']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={s.iconCircle}
-                >
-                  <Ionicons name={r.icon} size={34} color="#ffffff" />
-                </LinearGradient>
-                <Text style={s.cardTitle}>{r.title}</Text>
-                <Text style={s.cardSub}>{r.sub}</Text>
-              </Pressable>
-            );
-          })}
-
-        </ScrollView>
+          <Text style={{ fontSize: 32, fontWeight: '800', marginTop: 6 }}>
+            <Text style={{ color: '#3b13b8' }}>Bus</Text><Text style={{ color: '#fff' }}>Buddy</Text>
+          </Text>
+          <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600', marginTop: 2 }}>Safe Rides. Connected Families.</Text>
+        </View>
+        <Text style={{ color: '#fff', fontSize: 22, fontWeight: '800' }}>Choose Your Role</Text>
+        <Text style={{ color: 'rgba(255,255,255,0.85)', textAlign: 'center', marginBottom: 20 }}>Select the role that best describes you</Text>
+        <View style={{ gap: 14 }}>
+          {ROLES.map((r) => (
+            <Pressable
+              key={r.key}
+              onPress={() => onContinue(r.key)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 14,
+                padding: 18,
+                borderRadius: 18,
+                borderWidth: 1,
+                borderColor: C.line,
+                backgroundColor: 'rgba(255,255,255,0.06)',
+              }}
+            >
+              <View style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name={r.icon} size={26} color={r.color} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <T bold size={17}>{r.title}</T>
+                <T small dim>{r.blurb}</T>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={C.dim} />
+            </Pressable>
+          ))}
+        </View>
+        <Pressable onPress={onBack} style={{ marginTop: 16, alignItems: 'center' }}>
+          <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>Back to welcome</Text>
+        </Pressable>
       </SafeAreaView>
-    </LinearGradient>
+    </AuthBg>
   );
 }
-
-const s = StyleSheet.create({
-  flex: { flex: 1 },
-  scroll: { flexGrow: 1, alignItems: 'center', paddingHorizontal: 24, paddingBottom: 34 },
-
-  header: {
-    width: '100%',
-    maxWidth: 480,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  headerBrand: { flexDirection: 'row', alignItems: 'center' },
-  miniPin: {
-    width: 30,
-    height: 30,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: '#5312c8',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    marginRight: 8,
-  },
-  headerWord: { fontSize: 20, fontWeight: '800' },
-  wordBus: { color: '#5a16cf' },
-  wordBuddy: { color: '#25f0e4' },
-  dashes: { flexDirection: 'row' },
-  dash: { width: 22, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.4)', marginLeft: 6 },
-  dashOn: { backgroundColor: '#25f0e4' },
-
-  backCircle: {
-    alignSelf: 'flex-start',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.85)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    marginTop: 4,
-    marginBottom: 6,
-  },
-
-  title: { fontSize: 34, fontWeight: '800', color: '#ffffff', textAlign: 'center', marginTop: 6 },
-  subtitle: {
-    fontSize: 15,
-    color: 'rgba(255,255,255,0.92)',
-    textAlign: 'center',
-    marginTop: 8,
-    marginBottom: 24,
-  },
-
-  card: {
-    width: '100%',
-    maxWidth: 480,
-    borderRadius: 22,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.35)',
-    backgroundColor: 'rgba(12,20,70,0.55)',
-    paddingVertical: 18,
-    paddingHorizontal: 20,
-    marginBottom: 16,
-    alignItems: 'center',
-    shadowColor: '#7c4dff',
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-  },
-  cardOn: { borderColor: '#25f0e0', backgroundColor: 'rgba(20,30,95,0.75)' },
-  cardPressed: { opacity: 0.9 },
-
-  iconCircle: {
-    width: 74,
-    height: 74,
-    borderRadius: 37,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  cardTitle: { fontSize: 21, fontWeight: '800', color: '#ffffff' },
-  cardSub: {
-    fontSize: 13.5,
-    color: 'rgba(255,255,255,0.9)',
-    textAlign: 'center',
-    marginTop: 5,
-    lineHeight: 18,
-  },
-
-  hint: { color: '#ffd0d0', fontSize: 13, textAlign: 'center', marginBottom: 10 },
-
-  ctaWrap: { width: '100%', maxWidth: 480, borderRadius: 30, overflow: 'hidden', marginTop: 6 },
-  ctaDisabled: { opacity: 0.55 },
-  ctaPressed: { opacity: 0.85 },
-  cta: {
-    height: 58,
-    borderRadius: 30,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ctaText: { color: '#ffffff', fontSize: 18, fontWeight: '700' },
-});

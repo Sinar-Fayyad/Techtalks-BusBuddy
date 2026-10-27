@@ -85,7 +85,7 @@ export default function SignUpScreen({ role, onLogin, onBack, onGoLogin }) {
       return;
     }
     const lg = await call(null, '/auth/login', { method: 'POST', body: { identifier: email.trim(), password: pw } });
-    if (!lg.ok) { setBusy(false); setFormError('Account created. Please log in.'); return onGoLogin(); }
+    if (!lg.ok) { setBusy(false); setFormError('Account created. Please sign in.'); return onGoLogin(); }
     if (role === 'driver') {
       const err = await sendLicense(lg.data.token);
       if (err) {
@@ -119,16 +119,14 @@ export default function SignUpScreen({ role, onLogin, onBack, onGoLogin }) {
             <Card glow style={{ backgroundColor: 'rgba(12,22,120,0.74)', padding: 20 }}>
               <Text style={{ color: '#fff', fontSize: 28, fontWeight: '800', textAlign: 'center' }}>Sign Up</Text>
               <Text style={{ color: C.dim, textAlign: 'center', marginBottom: 14 }}>{copy.blurb}</Text>
-              {!retry ? (
-                <>
-                  <Field icon="person-outline" placeholder="Full Name" value={name} onChangeText={setName} error={errors.name} autoCapitalize="words" />
-                  {role === 'student' ? <Field icon="school-outline" placeholder="University Name" value={uni} onChangeText={setUni} error={errors.uni} autoCapitalize="words" /> : null}
-                  <Field icon="call-outline" placeholder={`Phone Number (${PHONE_HINT})`} value={phone} onChangeText={setPhone} error={errors.phone} keyboardType="phone-pad" />
-                  <Field icon="mail-outline" placeholder="Email" value={email} onChangeText={setEmail} error={errors.email} keyboardType="email-address" />
-                  <Field icon="lock-closed-outline" secure placeholder="Password (min 8 characters)" value={pw} onChangeText={setPw} error={errors.pw} />
-                  <Field icon="lock-closed-outline" secure placeholder="Confirm Password" value={conf} onChangeText={setConf} error={errors.conf} />
-                </>
-              ) : null}
+              <>
+                <Field icon="person-outline" placeholder="Full Name" value={name} onChangeText={setName} error={errors.name} autoCapitalize="words" />
+                {role === 'student' ? <Field icon="school-outline" placeholder="University Name" value={uni} onChangeText={setUni} error={errors.uni} autoCapitalize="words" /> : null}
+                <Field icon="call-outline" placeholder={`Phone Number (${PHONE_HINT})`} value={phone} onChangeText={setPhone} error={errors.phone} keyboardType="phone-pad" />
+                <Field icon="mail-outline" placeholder="Email" value={email} onChangeText={setEmail} error={errors.email} keyboardType="email-address" />
+                <Field icon="lock-closed-outline" secure placeholder="Password (min 8 characters)" value={pw} onChangeText={setPw} error={errors.pw} />
+                <Field icon="lock-closed-outline" secure placeholder="Confirm Password" value={conf} onChangeText={setConf} error={errors.conf} />
+              </>
               {role === 'driver' ? (
                 <View style={{ marginBottom: 12 }}>
                   <Btn kind="ghost" icon="image-outline" title={photo ? 'License photo selected ✓' : 'Upload driving license photo'} onPress={pickPhoto} />
