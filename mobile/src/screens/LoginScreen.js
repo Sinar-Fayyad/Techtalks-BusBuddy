@@ -25,7 +25,7 @@ export default function LoginScreen({ onLogin, onGoSignUp, onBack }) {
     const r = await call(null, '/auth/login', { method: 'POST', body: { identifier: identifier.trim(), password } });
     setBusy(false);
     if (!r.ok) {
-      setFormError(r.status === 401 ? 'Wrong email/phone or password.' : (r.data && r.data.error) || 'Could not log in. Try again.');
+      setFormError(r.status === 401 ? 'Wrong email/phone or password.' : (r.data && r.data.error) || 'Could not sign in. Try again.');
       return;
     }
     onLogin(r.data.token, r.data.role, remember);
@@ -48,7 +48,7 @@ export default function LoginScreen({ onLogin, onGoSignUp, onBack }) {
             </View>
             <Card glow style={{ backgroundColor: 'rgba(12,22,120,0.72)', padding: 20 }}>
               <Text style={{ color: '#fff', fontSize: 28, fontWeight: '800', textAlign: 'center' }}>Welcome Back!</Text>
-              <Text style={{ color: C.dim, textAlign: 'center', marginBottom: 16 }}>Log in to continue your journey.</Text>
+              <Text style={{ color: C.dim, textAlign: 'center', marginBottom: 16 }}>Sign in to continue your journey.</Text>
               <Field icon="person-outline" placeholder="Email or phone number" value={identifier} onChangeText={setIdentifier} error={errors.identifier} keyboardType="email-address" autoComplete="username" />
               <Field icon="lock-closed-outline" secure placeholder="Password" value={password} onChangeText={setPassword} error={errors.password} />
               <Pressable onPress={() => setRemember((x) => !x)} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }}>
@@ -56,7 +56,7 @@ export default function LoginScreen({ onLogin, onGoSignUp, onBack }) {
                 <Text style={{ color: '#fff' }}>Remember me</Text>
               </Pressable>
               {formError ? <Notice kind="error">{formError}</Notice> : null}
-              <Btn title="Log In" onPress={submit} busy={busy} />
+              <Btn title="Sign In" onPress={submit} busy={busy} />
             </Card>
             <Pressable onPress={onGoSignUp} style={{ marginTop: 16 }}>
               <Text style={{ color: '#fff', textAlign: 'center' }}>Don’t have an account? <Text style={{ color: '#0b1a6b', fontWeight: '800' }}>Sign up</Text></Text>

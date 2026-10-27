@@ -40,7 +40,7 @@ export default function WelcomeScreen({ onGetStarted, onLogin }) {
         </View>
 
         <View style={{ flex: 1, marginVertical: 14, borderRadius: 22, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.5)' }}>
-          <Image source={require('../../assets/busbuddy-skyline.jpg')} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+          <Image source={require('../../assets/Welcome.png')} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
         </View>
 
         <Pressable onPress={onGetStarted}>
@@ -50,7 +50,7 @@ export default function WelcomeScreen({ onGetStarted, onLogin }) {
           </LinearGradient>
         </Pressable>
         <Pressable onPress={onLogin} style={{ marginTop: 12 }}>
-          <Text style={{ color: '#fff', textAlign: 'center' }}>Already have an account? <Text style={{ color: '#0b1a6b', fontWeight: '800' }}>Log in</Text></Text>
+          <Text style={{ color: '#fff', textAlign: 'center' }}>Already have an account? <Text style={{ color: '#0b1a6b', fontWeight: '800' }}>Sign in</Text></Text>
         </Pressable>
       </SafeAreaView>
     </AuthBg>

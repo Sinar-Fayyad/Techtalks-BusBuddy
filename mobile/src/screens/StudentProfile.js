@@ -50,7 +50,7 @@ export default function StudentProfile() {
 
   return (
     <Screen>
-      <Title title="Pro" highlight="file" sub="Your account and information" />
+      <Title title="My" highlight="Profile" sub="Your account and information" />
       {error ? <Notice kind="error">{error}</Notice> : null}
       {notice ? <Notice kind="ok">{notice}</Notice> : null}
 
